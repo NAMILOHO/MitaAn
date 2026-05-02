@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+
 import 'firebase_options.dart';
+import 'providers/auth_provider.dart' as local_auth;
+import 'screens/auth/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
   runApp(const MyApp());
 }
 
@@ -15,22 +21,54 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'ProxiMarket',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1D9E75),
+    return ChangeNotifierProvider(
+      create: (_) => local_auth.AuthProvider(),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'ProxiMarket',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF1D9E75),
+          ),
+          useMaterial3: true,
         ),
-        useMaterial3: true,
+        home: const AuthWrapper(),
       ),
+    );
+  }
+}
 
-      // ✅ CORRECTION ICI
-      home: const Scaffold(
-        body: Center(
-          child: Text('ProxiMarket 🚀'),
-        ),
-      ),
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFF1D9E75),
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.hasData) {
+          return const Scaffold(
+            body: Center(
+              child: Text(
+                "✅ Connecté",
+                style: TextStyle(fontSize: 22),
+              ),
+            ),
+          );
+        }
+
+        return const LoginScreen();
+      },
     );
   }
 }

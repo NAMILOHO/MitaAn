@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,7 +17,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _passwordVisible = false;
 
-  // Couleur principale ProxiMarket
   static const Color primaryColor = Color(0xFF1D9E75);
 
   @override
@@ -24,12 +26,45 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // ✅ LOGIN AVEC PROVIDER
   void _login() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      // TODO : appel AuthService (Tâche 4)
-      await Future.delayed(const Duration(seconds: 2)); // simulé
+
+      final authProvider = context.read<AuthProvider>();
+
+      final success = await authProvider.signIn(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
       setState(() => _isLoading = false);
+
+      if (!success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                authProvider.errorMessage ?? 'Erreur de connexion'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // ✅ LOGIN GOOGLE
+  Future<void> _loginWithGoogle() async {
+    final authProvider = context.read<AuthProvider>();
+
+    final success = await authProvider.signInWithGoogle();
+
+    if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.errorMessage ?? 'Erreur Google'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -43,11 +78,10 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 40),
 
-                // Logo ProxiMarket
+                // Logo
                 Container(
                   width: 90,
                   height: 90,
@@ -61,7 +95,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     size: 50,
                   ),
                 ),
+
                 const SizedBox(height: 16),
+
                 const Text(
                   'ProxiMarket',
                   style: TextStyle(
@@ -70,73 +106,58 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: primaryColor,
                   ),
                 ),
+
                 const Text(
                   'Trouvez tout près de vous',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
+                  style: TextStyle(color: Colors.grey),
                 ),
+
                 const SizedBox(height: 48),
 
-                // Champ Email
+                // EMAIL
                 TextFormField(
                   controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
                     labelText: 'Adresse email',
-                    prefixIcon: const Icon(Icons.email_outlined,
-                        color: primaryColor),
+                    prefixIcon: const Icon(Icons.email_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          const BorderSide(color: primaryColor, width: 2),
                     ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Veuillez entrer votre email';
                     }
-                    final emailRegex =
-                        RegExp(r'^[^@]+@[^@]+\.[^@]+');
-                    if (!emailRegex.hasMatch(value)) {
+                    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
+                        .hasMatch(value)) {
                       return 'Email invalide';
                     }
                     return null;
                   },
                 ),
+
                 const SizedBox(height: 16),
 
-                // Champ Mot de passe
+                // PASSWORD
                 TextFormField(
                   controller: _passwordController,
                   obscureText: !_passwordVisible,
                   decoration: InputDecoration(
                     labelText: 'Mot de passe',
-                    prefixIcon:
-                        const Icon(Icons.lock_outline, color: primaryColor),
+                    prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _passwordVisible
                             ? Icons.visibility
                             : Icons.visibility_off,
-                        color: Colors.grey,
                       ),
                       onPressed: () {
-                        setState(
-                            () => _passwordVisible = !_passwordVisible);
+                        setState(() =>
+                            _passwordVisible = !_passwordVisible);
                       },
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          const BorderSide(color: primaryColor, width: 2),
                     ),
                   ),
                   validator: (value) {
@@ -149,9 +170,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
+
                 const SizedBox(height: 24),
 
-                // Bouton Se connecter
+                // BOUTON LOGIN
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -159,82 +181,55 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: _isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
                     ),
                     child: _isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                            'Se connecter',
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
+                        : const Text('Se connecter'),
                   ),
                 ),
+
                 const SizedBox(height: 16),
 
-                // Séparateur
                 const Row(
                   children: [
                     Expanded(child: Divider()),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('ou', style: TextStyle(color: Colors.grey)),
+                      child: Text('ou'),
                     ),
                     Expanded(child: Divider()),
                   ],
                 ),
+
                 const SizedBox(height: 16),
 
-                // Bouton Google
+                // GOOGLE
                 SizedBox(
                   width: double.infinity,
                   height: 52,
                   child: OutlinedButton.icon(
-                    onPressed: () {
-                      // TODO : Google Sign In (Tâche 4)
-                    },
+                    onPressed: _loginWithGoogle,
                     icon: const Icon(Icons.g_mobiledata,
-                        size: 28, color: Colors.red),
-                    label: const Text(
-                      'Continuer avec Google',
-                      style: TextStyle(
-                          fontSize: 15, color: Colors.black87),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
+                        color: Colors.red),
+                    label: const Text('Continuer avec Google'),
                   ),
                 ),
+
                 const SizedBox(height: 24),
 
-                // Lien vers inscription
+                // REGISTER
                 GestureDetector(
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => const RegisterScreen()),
+                        builder: (_) => const RegisterScreen(),
+                      ),
                     );
                   },
-                  child: RichText(
-                    text: const TextSpan(
-                      text: 'Pas encore inscrit ? ',
-                      style: TextStyle(color: Colors.grey),
-                      children: [
-                        TextSpan(
-                          text: 'Créer un compte',
-                          style: TextStyle(
-                            color: primaryColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+                  child: const Text(
+                    'Créer un compte',
+                    style: TextStyle(color: primaryColor),
                   ),
                 ),
               ],
@@ -245,6 +240,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-
-// Import temporaire pour éviter l'erreur de compilation
-import 'register_screen.dart';

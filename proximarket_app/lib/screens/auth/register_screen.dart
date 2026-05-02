@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -43,6 +45,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  // ✅ REGISTER AVEC PROVIDER
   void _register() async {
     if (_formKey.currentState!.validate()) {
       if (_isProfessional && _selectedCategory == null) {
@@ -54,10 +57,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
         return;
       }
+
+      final authProvider = context.read<AuthProvider>();
+
       setState(() => _isLoading = true);
-      // TODO : appel AuthService (Tâche 4)
-      await Future.delayed(const Duration(seconds: 2)); // simulé
+
+      final success = await authProvider.signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+        nom: _nomController.text.trim(),
+        phone: _phoneController.text.trim(),
+        isPro: _isProfessional,
+        categorie: _selectedCategory ?? '',
+      );
+
       setState(() => _isLoading = false);
+
+      if (!success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              authProvider.errorMessage ?? 'Erreur lors de l’inscription',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Compte créé avec succès 🎉'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pop(context);
+      }
     }
   }
 
@@ -86,21 +122,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
 
-                // Champ Nom complet
+                // Nom
                 _buildTextField(
                   controller: _nomController,
                   label: 'Nom complet',
                   icon: Icons.person_outline,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez entrer votre nom';
-                    }
-                    return null;
-                  },
+                  validator: (value) =>
+                      value!.isEmpty ? 'Veuillez entrer votre nom' : null,
                 ),
                 const SizedBox(height: 16),
 
-                // Champ Email
+                // Email
                 _buildTextField(
                   controller: _emailController,
                   label: 'Adresse email',
@@ -118,25 +150,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Champ Téléphone
+                // Téléphone
                 _buildTextField(
                   controller: _phoneController,
                   label: 'Numéro de téléphone',
                   icon: Icons.phone_outlined,
                   keyboardType: TextInputType.phone,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez entrer votre téléphone';
-                    }
-                    if (value.length < 8) {
-                      return 'Minimum 8 chiffres';
-                    }
-                    return null;
-                  },
+                  validator: (value) =>
+                      value!.length < 8 ? 'Numéro invalide' : null,
                 ),
                 const SizedBox(height: 16),
 
-                // Champ Mot de passe
+                // Mot de passe
                 _buildTextField(
                   controller: _passwordController,
                   label: 'Mot de passe',
@@ -147,39 +172,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       _passwordVisible
                           ? Icons.visibility
                           : Icons.visibility_off,
-                      color: Colors.grey,
                     ),
-                    onPressed: () =>
-                        setState(() => _passwordVisible = !_passwordVisible),
+                    onPressed: () => setState(
+                        () => _passwordVisible = !_passwordVisible),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Veuillez entrer un mot de passe';
-                    }
-                    if (value.length < 6) {
-                      return 'Minimum 6 caractères';
-                    }
-                    return null;
-                  },
+                  validator: (value) =>
+                      value!.length < 6 ? 'Minimum 6 caractères' : null,
                 ),
                 const SizedBox(height: 16),
 
-                // Champ Confirmation mot de passe
+                // Confirmation
                 _buildTextField(
                   controller: _confirmPasswordController,
                   label: 'Confirmer le mot de passe',
                   icon: Icons.lock_outline,
                   obscureText: true,
-                  validator: (value) {
-                    if (value != _passwordController.text) {
-                      return 'Les mots de passe ne correspondent pas';
-                    }
-                    return null;
-                  },
+                  validator: (value) =>
+                      value != _passwordController.text
+                          ? 'Les mots de passe ne correspondent pas'
+                          : null,
                 ),
                 const SizedBox(height: 24),
 
-                // Switch Professionnel
+                // Switch professionnel
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -194,15 +209,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         children: [
                           Text(
                             'Je suis un professionnel',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                           Text(
                             'Artisan, commerçant, prestataire...',
-                            style: TextStyle(
-                                color: Colors.grey, fontSize: 12),
+                            style:
+                                TextStyle(color: Colors.grey, fontSize: 12),
                           ),
                         ],
                       ),
@@ -220,40 +232,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
 
-                // Dropdown Catégorie (visible si professionnel)
+                // Catégorie
                 if (_isProfessional) ...[
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     value: _selectedCategory,
                     decoration: InputDecoration(
-                      labelText: 'Votre catégorie',
-                      prefixIcon: const Icon(Icons.work_outline,
-                          color: primaryColor),
+                      labelText: 'Catégorie',
+                      prefixIcon:
+                          const Icon(Icons.work_outline, color: primaryColor),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: primaryColor, width: 2),
-                      ),
                     ),
-                    hint: const Text('Sélectionnez votre catégorie'),
-                    items: _categories.map((cat) {
-                      return DropdownMenuItem(
-                        value: cat,
-                        child: Text(cat),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() => _selectedCategory = value);
-                    },
+                    items: _categories
+                        .map((c) =>
+                            DropdownMenuItem(value: c, child: Text(c)))
+                        .toList(),
+                    onChanged: (value) =>
+                        setState(() => _selectedCategory = value),
                   ),
                 ],
 
                 const SizedBox(height: 32),
 
-                // Bouton S'inscrire
+                // Bouton
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -261,21 +264,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     onPressed: _isLoading ? null : _register,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? const CircularProgressIndicator(
+                            color: Colors.white)
                         : const Text(
                             "S'inscrire",
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                   ),
                 ),
-                const SizedBox(height: 24),
               ],
             ),
           ),
@@ -284,7 +285,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // Widget réutilisable pour les champs de texte
+  // Widget champ
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -298,6 +299,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       controller: controller,
       keyboardType: keyboardType,
       obscureText: obscureText,
+      validator: validator,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: primaryColor),
@@ -305,12 +307,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primaryColor, width: 2),
-        ),
       ),
-      validator: validator,
     );
   }
 }
