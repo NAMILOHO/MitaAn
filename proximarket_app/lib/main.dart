@@ -24,6 +24,8 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
+
+      // ✅ CORRECTION ICI
       home: const Scaffold(
         body: Center(
           child: Text('ProxiMarket 🚀'),
