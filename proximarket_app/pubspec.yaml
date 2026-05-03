@@ -41,6 +41,8 @@ dependencies:
   geocoding: ^2.1.0 
   firebase_auth_web: ^5.0.0    # ← NOUVEAU
   permission_handler: ^11.0.0    # ← NOUVEAU
+  url_launcher: ^6.2.0          # ← NOUVEAU
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter

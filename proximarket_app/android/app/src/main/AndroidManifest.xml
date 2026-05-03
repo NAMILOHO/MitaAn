@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.proximarket_app">
 
     <!-- Permissions GPS -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
@@ -8,7 +9,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.CAMERA"/>
 
-    <!-- Android 13+ photos -->
+    <!-- Android 13+ -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
 
     <application
@@ -17,6 +18,7 @@
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true">
 
+        <!-- Activity principale -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -37,16 +39,33 @@
             </intent-filter>
         </activity>
 
+        <!-- Flutter embedding -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2"/>
+
     </application>
 
-    <!-- Requis pour geolocator sur Android -->
+    <!-- ✅ UNE SEULE BALISE QUERIES -->
     <queries>
+        <!-- Web / liens -->
         <intent>
             <action android:name="android.intent.action.VIEW"/>
         </intent>
+
+        <!-- Appel téléphone -->
+        <intent>
+            <action android:name="android.intent.action.DIAL"/>
+        </intent>
+
+        <intent>
+            <action android:name="android.intent.action.CALL"/>
+            <data android:scheme="tel"/>
+        </intent>
+
+        <!-- WhatsApp -->
+        <package android:name="com.whatsapp"/>
+        <package android:name="com.whatsapp.w4b"/>
     </queries>
 
 </manifest>
