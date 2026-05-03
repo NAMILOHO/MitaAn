@@ -7,7 +7,8 @@ import 'firebase_options.dart';
 import 'package:proximarket_app/providers/auth_provider.dart' as app_auth;
 
 import 'screens/auth/login_screen.dart';
-import 'screens/profile/profile_screen.dart';
+import 'screens/home/home_screen.dart';
+import 'providers/service_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,8 +24,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => app_auth.AuthProvider(),
+    return MultiProvider( // ✅ ici on met MultiProvider
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => app_auth.AuthProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ServiceProvider(),
+        ),
+      ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'ProxiMarket',
@@ -56,7 +64,7 @@ class AuthWrapper extends StatelessWidget {
         }
 
         if (snapshot.hasData) {
-          return const ProfileScreen();
+          return const HomeScreen();
         }
 
         return const LoginScreen();

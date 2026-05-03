@@ -70,5 +70,9 @@
 	<string>ProxiMarket a besoin d'accéder à vos photos pour votre photo de profil</string>
 	<key>NSCameraUsageDescription</key>
 	<string>ProxiMarket a besoin de votre caméra pour prendre une photo de profil</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>ProxiMarket a besoin de votre position pour trouver les services près de vous</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>ProxiMarket a besoin de votre position pour trouver les services près de vous</string>
 </dict>
 </plist>
