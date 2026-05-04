@@ -6,6 +6,7 @@ class UserModel {
   final String bio;
   final double gpsLat;
   final double gpsLng;
+  final String ville;        // ← AJOUTÉ
   final bool isPro;
   final String categorie;
   final String photoUrl;
@@ -20,6 +21,7 @@ class UserModel {
     this.bio = '',
     this.gpsLat = 0.0,
     this.gpsLng = 0.0,
+    this.ville = '',          // ← AJOUTÉ
     this.isPro = false,
     this.categorie = '',
     this.photoUrl = '',
@@ -27,7 +29,6 @@ class UserModel {
     this.createdAt,
   });
 
-  // Convertir Firestore → UserModel
   factory UserModel.fromMap(Map<String, dynamic> map, String uid) {
     return UserModel(
       uid: uid,
@@ -37,6 +38,7 @@ class UserModel {
       bio: map['bio'] ?? '',
       gpsLat: (map['gpsLat'] ?? 0.0).toDouble(),
       gpsLng: (map['gpsLng'] ?? 0.0).toDouble(),
+      ville: map['ville'] ?? '',    // ← AJOUTÉ
       isPro: map['isPro'] ?? false,
       categorie: map['categorie'] ?? '',
       photoUrl: map['photoUrl'] ?? '',
@@ -45,7 +47,6 @@ class UserModel {
     );
   }
 
-  // Convertir UserModel → Firestore
   Map<String, dynamic> toMap() {
     return {
       'nom': nom,
@@ -54,6 +55,7 @@ class UserModel {
       'bio': bio,
       'gpsLat': gpsLat,
       'gpsLng': gpsLng,
+      'ville': ville,           // ← AJOUTÉ
       'isPro': isPro,
       'categorie': categorie,
       'photoUrl': photoUrl,

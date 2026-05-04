@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../models/user_model.dart';
 import '../../services/user_service.dart';
@@ -35,16 +36,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
 
     if (uid == null) {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
       return;
     }
 
-    final user = await _userService.getUserProfile(uid);
+    try {
+      // 🔹 Tentative 1 : Firestore
+      final user = await _userService.getUserProfile(uid);
 
-    setState(() {
-      _userModel = user;
-      _isLoading = false;
-    });
+      if (user != null) {
+        if (mounted) {
+          setState(() {
+            _userModel = user;
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      // 🔹 Tentative 2 : création automatique si inexistant
+      final firebaseUser = FirebaseAuth.instance.currentUser!;
+
+      final newUser = UserModel(
+        uid: uid,
+        nom: firebaseUser.displayName ?? 'Utilisateur',
+        email: firebaseUser.email ?? '',
+        phone: '',
+        photoUrl: firebaseUser.photoURL ?? '',
+        createdAt: DateTime.now(),
+      );
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .set({
+        ...newUser.toMap(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      if (mounted) {
+        setState(() {
+          _userModel = newUser;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur chargement profil : $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _showPhotoOptions() {
@@ -196,7 +243,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Text(
               _userModel!.nom,
               style: const TextStyle(
-                  fontSize: 22, fontWeight: FontWeight.bold),
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
             ),
 
             const SizedBox(height: 8),

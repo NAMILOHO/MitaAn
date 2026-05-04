@@ -8,7 +8,7 @@ import 'package:proximarket_app/providers/auth_provider.dart' as app_auth;
 
 import 'screens/auth/login_screen.dart';
 import 'screens/profile/profile_screen.dart';
-
+import 'screens/home/home_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -56,8 +56,8 @@ class AuthWrapper extends StatelessWidget {
         }
 
         if (snapshot.hasData) {
-          return const ProfileScreen();
-        }
+  return const HomeScreen();
+}
 
         return const LoginScreen();
       },
