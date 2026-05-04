@@ -2,59 +2,38 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class LocationService {
 
   // ─────────────────────────────────────────
-  // DEMANDER LA PERMISSION GPS
-  // ─────────────────────────────────────────
-  Future<bool> requestPermission() async {
-    if (kIsWeb) {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      return permission != LocationPermission.denied &&
-             permission != LocationPermission.deniedForever;
-    }
-
-    // Sur Android/iOS → utiliser permission_handler
-    final status = await Permission.location.request();
-
-    if (status.isGranted) return true;
-
-    if (status.isPermanentlyDenied) {
-      // L'utilisateur a dit "Ne plus demander"
-      // On ouvre les paramètres de l'app
-      await openAppSettings();
-      return false;
-    }
-
-    return false;
-  }
-
-  // ─────────────────────────────────────────
-  // OBTENIR LA POSITION ACTUELLE
+  // OBTENIR LA POSITION AVEC GESTION COMPLÈTE
   // ─────────────────────────────────────────
   Future<Position> getCurrentPosition() async {
-    // 1. Demander la permission
-    final granted = await requestPermission();
-    if (!granted) {
-      throw 'Permission GPS refusée. '
-            'Activez-la dans Paramètres → Applications → ProxiMarket → Autorisations';
+    // 1. Vérifier si le GPS est activé
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+    if (!serviceEnabled) {
+      throw 'Le GPS est désactivé. Activez-le dans les paramètres.';
     }
 
-    // 2. Vérifier que le GPS est activé
-    if (!kIsWeb) {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        throw 'Le GPS est désactivé. '
-              'Activez-le dans les paramètres de votre téléphone.';
-      }
+    // 2. Vérifier permission
+    LocationPermission permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      // Demander permission
+      permission = await Geolocator.requestPermission();
     }
 
-    // 3. Obtenir la position
+    if (permission == LocationPermission.denied) {
+      throw 'Permission GPS refusée';
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      throw 'Permission refusée définitivement. '
+            'Activez-la dans Paramètres > Applications > ProxiMarket';
+    }
+
+    // 3. Obtenir position
     return await Geolocator.getCurrentPosition(
       desiredAccuracy: kIsWeb
           ? LocationAccuracy.low
@@ -64,7 +43,7 @@ class LocationService {
   }
 
   // ─────────────────────────────────────────
-  // CONVERTIR COORDONNÉES → NOM DE VILLE
+  // CONVERTIR COORDONNÉES → VILLE
   // ─────────────────────────────────────────
   Future<String> getCityFromCoordinates(double lat, double lng) async {
     try {
@@ -74,13 +53,20 @@ class LocationService {
       }
 
       final placemarks = await placemarkFromCoordinates(lat, lng);
+
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
+
         final city = place.locality ??
-                     place.subAdministrativeArea ?? '';
+                     place.subAdministrativeArea ??
+                     place.administrativeArea ??
+                     '';
+
         final country = place.country ?? '';
+
         return '$city, $country'.trim();
       }
+
       return 'Ville inconnue';
     } catch (e) {
       return 'Ville inconnue';
@@ -88,10 +74,11 @@ class LocationService {
   }
 
   // ─────────────────────────────────────────
-  // SAUVEGARDER LA POSITION DANS FIRESTORE
+  // SAUVEGARDER POSITION UTILISATEUR
   // ─────────────────────────────────────────
   Future<void> saveUserLocation(String uid) async {
     final position = await getCurrentPosition();
+
     final city = await getCityFromCoordinates(
       position.latitude,
       position.longitude,
@@ -108,13 +95,17 @@ class LocationService {
   }
 
   // ─────────────────────────────────────────
-  // CALCULER LA DISTANCE (en km)
+  // CALCUL DISTANCE (KM)
   // ─────────────────────────────────────────
   double calculateDistance(
     double lat1, double lng1,
     double lat2, double lng2,
   ) {
     return Geolocator.distanceBetween(
-            lat1, lng1, lat2, lng2) / 1000;
+      lat1,
+      lng1,
+      lat2,
+      lng2,
+    ) / 1000;
   }
 }

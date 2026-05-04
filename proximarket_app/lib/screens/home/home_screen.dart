@@ -21,11 +21,11 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   static const Color primaryColor = Color(0xFF1D9E75);
 
-  // Les 4 onglets
+  // ❗️ CORRIGÉ : on retire CreateServiceScreen
   final List<Widget> _screens = const [
     _HomeTab(),
     ServicesListScreen(),
-    CreateServiceScreen(),
+    SizedBox(), // placeholder
     ProfileScreen(),
   ];
 
@@ -36,12 +36,27 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _currentIndex,
         children: _screens,
       ),
+
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
-        onTap: (index) => setState(() => _currentIndex = index),
+
+        onTap: (index) {
+          if (index == 2) {
+            // 👉 Publier = navigation
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const CreateServiceScreen(),
+              ),
+            );
+          } else {
+            setState(() => _currentIndex = index);
+          }
+        },
+
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
@@ -55,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add_circle_outline),
-            activeIcon: Icon(Icons.add_circle),
+            activeIcon: Icon(Icons.add_circle, size: 30),
             label: 'Publier',
           ),
           BottomNavigationBarItem(
@@ -113,15 +128,20 @@ class _HomeTabState extends State<_HomeTab> {
       _isLoadingLocation = true;
       _locationStatus = 'Récupération en cours...';
     });
+
     try {
       final uid = FirebaseAuth.instance.currentUser!.uid;
+
       await _locationService.saveUserLocation(uid);
+
       final updated = await _userService.getUserProfile(uid);
+
       setState(() {
         _userModel = updated;
         _locationStatus =
             'Position mise à jour ✅\n${updated?.ville ?? ''}';
       });
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -132,6 +152,7 @@ class _HomeTabState extends State<_HomeTab> {
       }
     } catch (e) {
       setState(() => _locationStatus = 'Erreur : $e');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -149,6 +170,7 @@ class _HomeTabState extends State<_HomeTab> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
+
       appBar: AppBar(
         backgroundColor: primaryColor,
         elevation: 0,
@@ -174,6 +196,7 @@ class _HomeTabState extends State<_HomeTab> {
           ],
         ),
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -189,6 +212,7 @@ class _HomeTabState extends State<_HomeTab> {
               ),
             ),
             const SizedBox(height: 4),
+
             const Text(
               'Que cherchez-vous aujourd\'hui ?',
               style: TextStyle(color: Colors.grey, fontSize: 14),
@@ -226,12 +250,14 @@ class _HomeTabState extends State<_HomeTab> {
                     ],
                   ),
                   const SizedBox(height: 8),
+
                   Text(
                     _locationStatus,
                     style: const TextStyle(
                         color: Colors.white70, fontSize: 13),
                   ),
                   const SizedBox(height: 16),
+
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -268,6 +294,7 @@ class _HomeTabState extends State<_HomeTab> {
                 ],
               ),
             ),
+
             const SizedBox(height: 24),
 
             // ── Catégories ──
@@ -279,6 +306,7 @@ class _HomeTabState extends State<_HomeTab> {
               ),
             ),
             const SizedBox(height: 12),
+
             GridView.count(
               crossAxisCount: 4,
               shrinkWrap: true,
@@ -296,9 +324,10 @@ class _HomeTabState extends State<_HomeTab> {
                 _buildCategory(Icons.more_horiz, 'Autre'),
               ],
             ),
+
             const SizedBox(height: 24),
 
-            // ── Services près de vous ──
+            // ── Services ──
             const Text(
               'Services près de vous',
               style: TextStyle(
@@ -306,7 +335,9 @@ class _HomeTabState extends State<_HomeTab> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+
             const SizedBox(height: 12),
+
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(32),
