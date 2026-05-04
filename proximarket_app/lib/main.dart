@@ -4,13 +4,18 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
-import 'package:proximarket_app/providers/auth_provider.dart' as app_auth;
 
+// Providers
+import 'package:proximarket_app/providers/auth_provider.dart' as app_auth;
+import 'package:proximarket_app/providers/service_provider.dart'; // ✅ AJOUT
+
+// Screens
 import 'screens/auth/login_screen.dart';
-import 'screens/profile/profile_screen.dart';
 import 'screens/home/home_screen.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -23,23 +28,36 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => app_auth.AuthProvider(),
+    return MultiProvider( // ✅ CHANGEMENT ICI
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => app_auth.AuthProvider(),
+        ),
+
+        ChangeNotifierProvider(
+          create: (_) => ServiceProvider(), // ✅ TRÈS IMPORTANT
+        ),
+      ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'ProxiMarket',
+
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF1D9E75),
           ),
           useMaterial3: true,
         ),
+
         home: const AuthWrapper(),
       ),
     );
   }
 }
 
+// ─────────────────────────────────────────
+// GESTION AUTH
+// ─────────────────────────────────────────
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
@@ -56,8 +74,8 @@ class AuthWrapper extends StatelessWidget {
         }
 
         if (snapshot.hasData) {
-  return const HomeScreen();
-}
+          return const HomeScreen();
+        }
 
         return const LoginScreen();
       },

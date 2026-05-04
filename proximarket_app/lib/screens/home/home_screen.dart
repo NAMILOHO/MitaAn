@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../services/services_list_screen.dart';
 import '../services/create_service_screen.dart';
 import '../profile/profile_screen.dart';
+import '../chat/chat_list_screen.dart';
+
 import '../../services/location_service.dart';
 import '../../services/user_service.dart';
 import '../../models/user_model.dart';
@@ -21,11 +24,11 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   static const Color primaryColor = Color(0xFF1D9E75);
 
-  // ❗️ CORRIGÉ : on retire CreateServiceScreen
   final List<Widget> _screens = const [
     _HomeTab(),
     ServicesListScreen(),
-    SizedBox(), // placeholder
+    CreateServiceScreen(),
+    ChatListScreen(),
     ProfileScreen(),
   ];
 
@@ -36,27 +39,14 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _currentIndex,
         children: _screens,
       ),
-
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
-
         onTap: (index) {
-          if (index == 2) {
-            // 👉 Publier = navigation
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const CreateServiceScreen(),
-              ),
-            );
-          } else {
-            setState(() => _currentIndex = index);
-          }
+          setState(() => _currentIndex = index);
         },
-
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
@@ -70,8 +60,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add_circle_outline),
-            activeIcon: Icon(Icons.add_circle, size: 30),
+            activeIcon: Icon(Icons.add_circle),
             label: 'Publier',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline),
+            activeIcon: Icon(Icons.chat_bubble),
+            label: 'Messages',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
