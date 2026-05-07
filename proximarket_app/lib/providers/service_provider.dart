@@ -32,6 +32,7 @@ class ServiceProvider extends ChangeNotifier {
     required String ville,
   }) async {
     _setLoading(true);
+
     try {
       // 1. Uploader les photos
       List<String> photoUrls = [];
@@ -55,7 +56,7 @@ class ServiceProvider extends ChangeNotifier {
         ville: ville,
       );
 
-      // 3. Ajouter à la liste locale
+      // 3. Ajouter en tête des listes locales
       _services.insert(0, service);
       _myServices.insert(0, service);
 
@@ -122,6 +123,31 @@ class ServiceProvider extends ChangeNotifier {
     }
   }
 
+  // ─────────────────────────────────────────
+  // SUPPRIMER UNE ANNONCE
+  // ─────────────────────────────────────────
+  Future<bool> deleteService(String serviceId) async {
+    _setLoading(true);
+    try {
+      await _serviceFirestore.deleteService(serviceId);
+
+      // Supprimer des listes locales
+      _services.removeWhere((s) => s.id == serviceId);
+      _myServices.removeWhere((s) => s.id == serviceId);
+
+      _errorMessage = null;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Méthode privée pour gérer l'état de chargement
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();

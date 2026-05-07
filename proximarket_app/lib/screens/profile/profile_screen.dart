@@ -9,6 +9,7 @@ import '../../services/user_service.dart';
 import '../../providers/auth_provider.dart' as app_auth;
 
 import 'edit_profile_screen.dart';
+import '../services/my_services_screen.dart';   // ← Import ajouté
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -254,6 +255,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 30),
 
+            // ── Bouton Mes Annonces ──
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const MyServicesScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.list_alt, color: primaryColor),
+                label: const Text(
+                  'Mes annonces',
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: primaryColor),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Bouton Modifier le profil
             ElevatedButton.icon(
               onPressed: () async {
                 final updated = await Navigator.push(
