@@ -1,5 +1,5 @@
-name: proximarket_app
-description: "A new Flutter project."
+name: mitan_app
+description: MitaAn — Plateforme locale de services et de vente avec géolocalisation
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -43,7 +43,7 @@ dependencies:
   url_launcher: ^6.3.2
   firebase_messaging: ^15.0.0           # ← NOUVEAU
   flutter_local_notifications: ^17.0.0  # ← NOUVEAU
-  
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

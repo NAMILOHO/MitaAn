@@ -31,9 +31,9 @@ class NotificationService {
   // Canal Android
   static const AndroidNotificationChannel _channel =
       AndroidNotificationChannel(
-    'proximarket_channel',
-    'ProxiMarket Notifications',
-    description: 'Notifications de ProxiMarket',
+    'mitaan_channel',
+    'MitaAn Notifications',
+    description: 'Notifications de MitaAn',
     importance: Importance.high,
     playSound: true,
   );
@@ -103,7 +103,7 @@ class NotificationService {
       final notification = message.notification;
       if (notification != null) {
         _showLocalNotification(
-          title: notification.title ?? 'ProxiMarket',
+          title: notification.title ?? 'MitaAn',
           body: notification.body ?? '',
           payload: message.data['chatId'] ?? '',
         );
@@ -125,9 +125,9 @@ class NotificationService {
     String payload = '',
   }) async {
     const androidDetails = AndroidNotificationDetails(
-      'proximarket_channel',
-      'ProxiMarket Notifications',
-      channelDescription: 'Notifications ProxiMarket',
+      'mitaan_channel',
+      'MitaAn Notifications',
+      channelDescription: 'Notifications MitaAn',
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,

@@ -8,7 +8,7 @@ import 'providers/service_provider.dart';
 import 'services/notification_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
-
+import 'screens/splash_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -35,14 +35,14 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'ProxiMarket',
+        title: 'MitaAnS',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF1D9E75),
           ),
           useMaterial3: true,
         ),
-        home: const AuthWrapper(),
+        home: const SplashScreen(),
       ),
     );
   }
