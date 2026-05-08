@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../../models/service_model.dart';
 import '../../providers/service_provider.dart';
-import '../../services/service_firestore.dart';
+
 import 'service_detail_screen.dart';
 import 'create_service_screen.dart';
 
@@ -225,7 +225,7 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
                       width: 64,
                       height: 64,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
+                      errorBuilder: (context, error, stackTrace) =>
                           _placeholderImage(),
                     )
                   : _placeholderImage(),

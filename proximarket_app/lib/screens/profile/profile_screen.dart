@@ -9,7 +9,7 @@ import '../../services/user_service.dart';
 import '../../providers/auth_provider.dart' as app_auth;
 
 import 'edit_profile_screen.dart';
-import '../services/my_services_screen.dart';   // ← Import ajouté
+import '../services/my_services_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -134,7 +134,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           CircleAvatar(
             radius: 30,
-            backgroundColor: primaryColor.withOpacity(0.2),
+            backgroundColor: primaryColor.withValues(alpha: 0.2),
             child: Icon(icon, color: primaryColor),
           ),
           const SizedBox(height: 8),
@@ -201,6 +201,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: const Icon(Icons.logout, color: Colors.red),
             onPressed: () async {
               await context.read<app_auth.AuthProvider>().signOut();
+              // La déconnexion est détectée automatiquement par AuthWrapper
+              // Pas besoin de Navigator.pushAndRemoveUntil
             },
           )
         ],

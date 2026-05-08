@@ -77,7 +77,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
     }
   }
 
-  // Choisir des photos
+  // ====================== MISE À JOUR : Méthode _pickImages ======================
   Future<void> _pickImages() async {
     try {
       final images = await _serviceFirestore.pickImages();
@@ -90,11 +90,14 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
         });
       }
     } catch (e) {
+      // Vérifier mounted AVANT d'utiliser context après await
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
       );
     }
   }
+  // ============================================================================
 
   // Supprimer une photo sélectionnée
   void _removeImage(int index) {
@@ -144,7 +147,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(serviceProvider.errorMessage ?? 'Erreur'),
+          content: Text(serviceProvider.errorMessage ?? 'Erreur lors de la publication'),
           backgroundColor: Colors.red,
         ),
       );
@@ -183,7 +186,6 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               // ── Photos ──
               const Text(
                 'Photos (max 4)',
@@ -289,7 +291,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
 
               // ── Catégorie ──
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 decoration: _inputDecoration('Catégorie', Icons.category),
                 hint: const Text('Choisir une catégorie'),
                 items: _categories.map((cat) {
@@ -332,10 +334,10 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.08),
+                  color: primaryColor.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: primaryColor.withOpacity(0.3),
+                    color: primaryColor.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
@@ -380,8 +382,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                     ),
                   ),
                   child: _isLoading
-                      ? const CircularProgressIndicator(
-                          color: Colors.white)
+                      ? const CircularProgressIndicator(color: Colors.white)
                       : const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

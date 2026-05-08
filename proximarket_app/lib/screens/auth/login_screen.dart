@@ -26,39 +26,41 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // ✅ LOGIN AVEC PROVIDER
-  void _login() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
 
-      final authProvider = context.read<AuthProvider>();
+    setState(() => _isLoading = true);
 
-      final success = await authProvider.signIn(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.signIn(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.errorMessage ?? 'Erreur de connexion'),
+          backgroundColor: Colors.red,
+        ),
       );
-
-      setState(() => _isLoading = false);
-
-      if (!success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                authProvider.errorMessage ?? 'Erreur de connexion'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     }
+    // Si success → AuthWrapper détecte le changement et redirige automatiquement
   }
 
-  // ✅ LOGIN GOOGLE
   Future<void> _loginWithGoogle() async {
-    final authProvider = context.read<AuthProvider>();
+    setState(() => _isLoading = true);
 
+    final authProvider = context.read<AuthProvider>();
     final success = await authProvider.signInWithGoogle();
 
-    if (!success && mounted) {
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (!success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.errorMessage ?? 'Erreur Google'),
@@ -78,10 +80,11 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Form(
             key: _formKey,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 40),
 
-                // Logo
+                // Logo MitaAn
                 Container(
                   width: 90,
                   height: 90,
@@ -95,9 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     size: 50,
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
                 const Text(
                   'MitaAn',
                   style: TextStyle(
@@ -106,74 +107,79 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: primaryColor,
                   ),
                 ),
-
                 const Text(
                   'Trouvez tout près de vous',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
                 ),
-
                 const SizedBox(height: 48),
 
-                // EMAIL
+                // Email
                 TextFormField(
                   controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
                     labelText: 'Adresse email',
-                    prefixIcon: const Icon(Icons.email_outlined),
+                    prefixIcon: const Icon(Icons.email_outlined,
+                        color: primaryColor),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          const BorderSide(color: primaryColor, width: 2),
                     ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Veuillez entrer votre email';
                     }
-                    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
-                        .hasMatch(value)) {
+                    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
                       return 'Email invalide';
                     }
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 16),
 
-                // PASSWORD
+                // Mot de passe
                 TextFormField(
                   controller: _passwordController,
                   obscureText: !_passwordVisible,
                   decoration: InputDecoration(
                     labelText: 'Mot de passe',
-                    prefixIcon: const Icon(Icons.lock_outline),
+                    prefixIcon: const Icon(Icons.lock_outline,
+                        color: primaryColor),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _passwordVisible
                             ? Icons.visibility
                             : Icons.visibility_off,
+                        color: Colors.grey,
                       ),
-                      onPressed: () {
-                        setState(() =>
-                            _passwordVisible = !_passwordVisible);
-                      },
+                      onPressed: () => setState(
+                          () => _passwordVisible = !_passwordVisible),
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          const BorderSide(color: primaryColor, width: 2),
                     ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Veuillez entrer votre mot de passe';
                     }
-                    if (value.length < 6) {
-                      return 'Minimum 6 caractères';
-                    }
+                    if (value.length < 6) return 'Minimum 6 caractères';
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 24),
 
-                // BOUTON LOGIN
+                // Bouton Se connecter
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -181,55 +187,81 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: _isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text('Se connecter'),
+                        ? const CircularProgressIndicator(
+                            color: Colors.white)
+                        : const Text(
+                            'Se connecter',
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold),
+                          ),
                   ),
                 ),
-
                 const SizedBox(height: 16),
 
+                // Séparateur
                 const Row(
                   children: [
                     Expanded(child: Divider()),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('ou'),
+                      child: Text('ou',
+                          style: TextStyle(color: Colors.grey)),
                     ),
                     Expanded(child: Divider()),
                   ],
                 ),
-
                 const SizedBox(height: 16),
 
-                // GOOGLE
+                // Bouton Google
                 SizedBox(
                   width: double.infinity,
                   height: 52,
                   child: OutlinedButton.icon(
-                    onPressed: _loginWithGoogle,
+                    onPressed: _isLoading ? null : _loginWithGoogle,
                     icon: const Icon(Icons.g_mobiledata,
-                        color: Colors.red),
-                    label: const Text('Continuer avec Google'),
+                        size: 28, color: Colors.red),
+                    label: const Text(
+                      'Continuer avec Google',
+                      style: TextStyle(
+                          fontSize: 15, color: Colors.black87),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
                 ),
-
                 const SizedBox(height: 24),
 
-                // REGISTER
+                // Lien inscription
                 GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const RegisterScreen(),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    'Créer un compte',
-                    style: TextStyle(color: primaryColor),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const RegisterScreen()),
+                  ),
+                  child: RichText(
+                    text: const TextSpan(
+                      text: 'Pas encore inscrit ? ',
+                      style: TextStyle(color: Colors.grey),
+                      children: [
+                        TextSpan(
+                          text: 'Créer un compte',
+                          style: TextStyle(
+                            color: primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

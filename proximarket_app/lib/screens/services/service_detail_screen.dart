@@ -107,7 +107,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                           itemBuilder: (_, i) => Image.network(
                             widget.service.photos[i],
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
+                            errorBuilder: (context, error, stackTrace) =>
                                 _placeholder(),
                           ),
                         ),

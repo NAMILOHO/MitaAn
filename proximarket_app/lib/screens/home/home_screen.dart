@@ -176,10 +176,9 @@ class _HomeTabState extends State<_HomeTab> {
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                _userModel?.ville != null &&
-                        _userModel!.ville!.isNotEmpty
-                    ? _userModel!.ville!
-                    : 'ProxiMarket',
+                _userModel?.ville != null && _userModel!.ville.isNotEmpty
+                    ? _userModel!.ville
+                    : 'MitaAn',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -366,7 +365,7 @@ class _HomeTabState extends State<_HomeTab> {
           width: 52,
           height: 52,
           decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.1),
+            color: primaryColor.withValues(alpha:0.1),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Icon(icon, color: primaryColor, size: 26),

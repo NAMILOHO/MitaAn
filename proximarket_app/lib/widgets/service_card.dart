@@ -27,7 +27,7 @@ class ServiceCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha:0.06),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -48,7 +48,7 @@ class ServiceCard extends StatelessWidget {
                       height: 160,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _placeholderImage(),
+                      errorBuilder: (context, error, stackTrace) => _placeholderImage(),
                     )
                   : _placeholderImage(),
             ),
@@ -80,7 +80,7 @@ class ServiceCard extends StatelessWidget {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.12),
+                          color: primaryColor.withValues(alpha:0.12),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -148,7 +148,7 @@ class ServiceCard extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: _proximityColor(distanceKm!)
-                                .withOpacity(0.15),
+                                .withValues(alpha:0.15),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(

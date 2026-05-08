@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../providers/auth_provider.dart';
+import 'login_screen.dart';   // ← Import ajouté
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -59,7 +61,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
 
       final authProvider = context.read<AuthProvider>();
-
       setState(() => _isLoading = true);
 
       final success = await authProvider.signUp(
@@ -91,7 +92,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             backgroundColor: Colors.green,
           ),
         );
-
         Navigator.pop(context);
       }
     }
@@ -106,11 +106,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              );
+            }
+          },
         ),
         title: const Text(
           'Créer un compte',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: SafeArea(
@@ -121,7 +133,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
                 // Nom
                 _buildTextField(
                   controller: _nomController,
@@ -220,7 +231,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       Switch(
                         value: _isProfessional,
-                        activeColor: primaryColor,
+                        activeThumbColor: primaryColor,
                         onChanged: (value) {
                           setState(() {
                             _isProfessional = value;
@@ -236,7 +247,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 if (_isProfessional) ...[
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: _selectedCategory,
+                    initialValue: _selectedCategory,
                     decoration: InputDecoration(
                       labelText: 'Catégorie',
                       prefixIcon:
@@ -253,7 +264,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         setState(() => _selectedCategory = value),
                   ),
                 ],
-
                 const SizedBox(height: 32),
 
                 // Bouton
@@ -269,8 +279,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     child: _isLoading
-                        ? const CircularProgressIndicator(
-                            color: Colors.white)
+                        ? const CircularProgressIndicator(color: Colors.white)
                         : const Text(
                             "S'inscrire",
                             style: TextStyle(fontWeight: FontWeight.bold),

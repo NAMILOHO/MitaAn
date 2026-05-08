@@ -181,7 +181,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               // Dropdown catégorie (si professionnel)
               if (widget.user.isPro) ...[
                 DropdownButtonFormField<String>(
-                  value: _selectedCategory,
+                  initialValue: _selectedCategory,
                   decoration: InputDecoration(
                     labelText: 'Catégorie professionnelle',
                     prefixIcon: const Icon(Icons.work_outline,
