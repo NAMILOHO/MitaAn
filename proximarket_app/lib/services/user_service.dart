@@ -1,12 +1,12 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
+
 import '../models/user_model.dart';
+import 'cloudinary_service.dart';   // ← Import Cloudinary ajouté
 
 class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
   final ImagePicker _picker = ImagePicker();
 
   // ─────────────────────────────────────────
@@ -25,19 +25,17 @@ class UserService {
   }
 
   // ─────────────────────────────────────────
-  // CHOISIR UNE PHOTO (galerie ou caméra)
+  // CHOISIR UNE PHOTO (Optimisé)
   // ─────────────────────────────────────────
   Future<File?> pickImage(ImageSource source) async {
     try {
       final XFile? picked = await _picker.pickImage(
         source: source,
-        maxWidth: 500,
-        maxHeight: 500,
-        imageQuality: 70,
+        maxWidth: 400,
+        maxHeight: 400,
+        imageQuality: 60,
       );
-      if (picked != null) {
-        return File(picked.path);
-      }
+      if (picked != null) return File(picked.path);
       return null;
     } catch (e) {
       throw 'Erreur lors de la sélection de la photo';
@@ -45,25 +43,22 @@ class UserService {
   }
 
   // ─────────────────────────────────────────
-  // UPLOADER LA PHOTO SUR FIREBASE STORAGE
+  // TOUT EN UN : choisir + uploader sur Cloudinary + mettre à jour Firestore
   // ─────────────────────────────────────────
-  Future<String> uploadProfilePhoto(String uid, File imageFile) async {
-    try {
-      // Chemin dans Storage : profiles/uid.jpg
-      final ref = _storage.ref().child('profiles/$uid.jpg');
+  Future<String?> changeProfilePhoto(String uid, ImageSource source) async {
+    final file = await pickImage(source);
+    if (file == null) return null;
 
-      // Upload du fichier
-      await ref.putFile(
-        imageFile,
-        SettableMetadata(contentType: 'image/jpeg'),
-      );
+    final cloudinary = CloudinaryService();
+    final url = await cloudinary.uploadProfilePhoto(file);
 
-      // Récupérer l'URL publique
-      final url = await ref.getDownloadURL();
-      return url;
-    } catch (e) {
-      throw 'Erreur lors de l\'upload de la photo';
+    if (url != null) {
+      await _firestore.collection('users').doc(uid).update({
+        'photoUrl': url,
+      });
     }
+
+    return url;
   }
 
   // ─────────────────────────────────────────
@@ -75,17 +70,5 @@ class UserService {
     } catch (e) {
       throw 'Erreur lors de la mise à jour du profil';
     }
-  }
-
-  // ─────────────────────────────────────────
-  // TOUT EN UN : choisir + uploader + mettre à jour
-  // ─────────────────────────────────────────
-  Future<String?> changeProfilePhoto(String uid, ImageSource source) async {
-    final file = await pickImage(source);
-    if (file == null) return null;
-
-    final url = await uploadProfilePhoto(uid, file);
-    await updateProfile(uid, {'photoUrl': url});
-    return url;
   }
 }

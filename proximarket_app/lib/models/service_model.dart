@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class ServiceModel {
   final String id;
   final String userId;
@@ -36,12 +38,14 @@ class ServiceModel {
       description: map['description'] ?? '',
       categorie: map['categorie'] ?? '',
       prix: (map['prix'] ?? 0.0).toDouble(),
-      photos: List<String>.from(map['photos'] ?? []),
+      photos: List<String>.from(map['photos'] ?? []),   // ← Bien sécurisé
       gpsLat: (map['gpsLat'] ?? 0.0).toDouble(),
       gpsLng: (map['gpsLng'] ?? 0.0).toDouble(),
       ville: map['ville'] ?? '',
       isActive: map['isActive'] ?? true,
-      createdAt: map['createdAt']?.toDate(),
+      createdAt: map['createdAt'] is Timestamp 
+          ? (map['createdAt'] as Timestamp).toDate() 
+          : map['createdAt']?.toDate(),
     );
   }
 
@@ -58,7 +62,7 @@ class ServiceModel {
       'gpsLng': gpsLng,
       'ville': ville,
       'isActive': isActive,
-      'createdAt': createdAt,
+      if (createdAt != null) 'createdAt': createdAt,
     };
   }
 }

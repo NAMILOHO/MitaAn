@@ -43,6 +43,7 @@ dependencies:
   url_launcher: ^6.3.2
   firebase_messaging: ^15.0.0           # ← NOUVEAU
   flutter_local_notifications: ^17.0.0  # ← NOUVEAU
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:

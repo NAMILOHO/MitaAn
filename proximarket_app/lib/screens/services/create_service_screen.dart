@@ -73,21 +73,17 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
         _locationLoaded = true;
       });
     } catch (e) {
-      // GPS non disponible → on continue sans position
       setState(() => _locationLoaded = true);
     }
   }
 
-  // ====================== MISE À JOUR : Méthode _pickImages ======================
+  // Choisir des photos
   Future<void> _pickImages() async {
     try {
       final images = await _serviceFirestore.pickImages();
       if (images.isNotEmpty) {
         setState(() {
-          // Maximum 4 photos
-          _selectedImages = [..._selectedImages, ...images]
-              .take(4)
-              .toList();
+          _selectedImages = [..._selectedImages, ...images].take(4).toList();
         });
       }
     } catch (e) {
@@ -97,14 +93,13 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
       );
     }
   }
-  // ============================================================================
 
-  // Supprimer une photo sélectionnée
+  // Supprimer une photo
   void _removeImage(int index) {
     setState(() => _selectedImages.removeAt(index));
   }
 
-  // Publier l'annonce
+  // ====================== CORRECTION : Méthode _publish ======================
   Future<void> _publish() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCategory == null) {
@@ -136,14 +131,29 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
 
     setState(() => _isLoading = false);
 
-    if (success && mounted) {
+    if (success) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Annonce publiée avec succès ✅'),
           backgroundColor: Colors.green,
         ),
       );
-      Navigator.pop(context, true);
+
+      // Vider le formulaire pour permettre une nouvelle publication
+      _formKey.currentState!.reset();
+      _titreController.clear();
+      _descriptionController.clear();
+      _prixController.clear();
+
+      setState(() {
+        _selectedCategory = null;
+        _selectedImages = [];
+      });
+
+      // Recharger la localisation
+      _loadLocation();
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -153,6 +163,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
       );
     }
   }
+  // ============================================================================
 
   @override
   Widget build(BuildContext context) {
@@ -198,7 +209,6 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: [
-                    // Bouton ajouter photo
                     if (_selectedImages.length < 4)
                       GestureDetector(
                         onTap: _pickImages,
@@ -231,7 +241,6 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                           ),
                         ),
                       ),
-                    // Photos sélectionnées
                     ..._selectedImages.asMap().entries.map((entry) {
                       return Stack(
                         children: [
@@ -247,7 +256,6 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                               ),
                             ),
                           ),
-                          // Bouton supprimer
                           Positioned(
                             top: 4,
                             right: 14,
@@ -274,20 +282,15 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
               ),
               const SizedBox(height: 20),
 
-              // ── Titre ──
+              // Titre
               TextFormField(
                 controller: _titreController,
-                decoration: _inputDecoration(
-                  'Titre de l\'annonce',
-                  Icons.title,
-                ),
-                validator: (v) => v == null || v.isEmpty
-                    ? 'Le titre est requis'
-                    : null,
+                decoration: _inputDecoration('Titre de l\'annonce', Icons.title),
+                validator: (v) => v == null || v.isEmpty ? 'Le titre est requis' : null,
               ),
               const SizedBox(height: 16),
 
-              // ── Catégorie ──
+              // Catégorie
               DropdownButtonFormField<String>(
                 initialValue: _selectedCategory,
                 decoration: _inputDecoration('Catégorie', Icons.category),
@@ -299,44 +302,35 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ── Description ──
+              // Description
               TextFormField(
                 controller: _descriptionController,
                 maxLines: 4,
-                decoration: _inputDecoration(
-                  'Description du service',
-                  Icons.description,
-                ),
-                validator: (v) => v == null || v.length < 10
-                    ? 'Minimum 10 caractères'
-                    : null,
+                decoration: _inputDecoration('Description du service', Icons.description),
+                validator: (v) => v == null || v.length < 10 ? 'Minimum 10 caractères' : null,
               ),
               const SizedBox(height: 16),
 
-              // ── Prix ──
+              // Prix
               TextFormField(
                 controller: _prixController,
                 keyboardType: TextInputType.number,
                 decoration: _inputDecoration('Prix (FCFA)', Icons.payments),
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Le prix est requis';
-                  if (double.tryParse(v) == null) {
-                    return 'Entrez un nombre valide';
-                  }
+                  if (double.tryParse(v) == null) return 'Entrez un nombre valide';
                   return null;
                 },
               ),
               const SizedBox(height: 16),
 
-              // ── Localisation ──
+              // Localisation
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: primaryColor.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: primaryColor.withValues(alpha: 0.3),
-                  ),
+                  border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -345,9 +339,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                     Expanded(
                       child: Text(
                         _locationLoaded
-                            ? (_ville.isNotEmpty
-                                ? _ville
-                                : 'Position non disponible')
+                            ? (_ville.isNotEmpty ? _ville : 'Position non disponible')
                             : 'Récupération de la position...',
                         style: const TextStyle(fontSize: 14),
                       ),
@@ -366,7 +358,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
               ),
               const SizedBox(height: 32),
 
-              // ── Bouton Publier ──
+              // Bouton Publier
               SizedBox(
                 width: double.infinity,
                 height: 54,
@@ -409,9 +401,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
     return InputDecoration(
       labelText: label,
       prefixIcon: Icon(icon, color: primaryColor),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: primaryColor, width: 2),

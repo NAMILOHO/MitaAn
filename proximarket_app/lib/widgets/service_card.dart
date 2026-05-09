@@ -4,7 +4,7 @@ import '../utils/distance_helper.dart';
 
 class ServiceCard extends StatelessWidget {
   final ServiceModel service;
-  final double? distanceKm; // null si position inconnue
+  final double? distanceKm;
   final VoidCallback? onTap;
 
   const ServiceCard({
@@ -18,6 +18,11 @@ class ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ====================== DEBUG : Photos ======================
+    // ignore: avoid_print
+    print('Photos de "${service.titre}": ${service.photos}');
+    // ============================================================
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -27,7 +32,7 @@ class ServiceCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha:0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -36,8 +41,7 @@ class ServiceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
-            // ── Photo principale ──
+            // ── Photo principale (avec loading + error) ──
             ClipRRect(
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(16),
@@ -48,7 +52,25 @@ class ServiceCard extends StatelessWidget {
                       height: 160,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => _placeholderImage(),
+                      // Placeholder pendant le chargement
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          height: 160,
+                          color: const Color(0xFFE8F5F0),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: primaryColor,
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) =>
+                          _placeholderImage(),
                     )
                   : _placeholderImage(),
             ),
@@ -59,7 +81,6 @@ class ServiceCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   // Titre + Badge catégorie
                   Row(
                     children: [
@@ -80,7 +101,7 @@ class ServiceCard extends StatelessWidget {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: primaryColor.withValues(alpha:0.12),
+                          color: primaryColor.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -124,13 +145,9 @@ class ServiceCard extends StatelessWidget {
                       ),
                       const Spacer(),
 
-                      // Distance
+                      // Distance ou Ville
                       if (distanceKm != null) ...[
-                        const Icon(
-                          Icons.location_on,
-                          size: 14,
-                          color: Colors.grey,
-                        ),
+                        const Icon(Icons.location_on, size: 14, color: Colors.grey),
                         const SizedBox(width: 2),
                         Text(
                           DistanceHelper.format(distanceKm!),
@@ -140,7 +157,6 @@ class ServiceCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        // Label proximité
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 6,
@@ -148,7 +164,7 @@ class ServiceCard extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: _proximityColor(distanceKm!)
-                                .withValues(alpha:0.15),
+                                .withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
@@ -161,11 +177,7 @@ class ServiceCard extends StatelessWidget {
                           ),
                         ),
                       ] else ...[
-                        const Icon(
-                          Icons.location_on,
-                          size: 14,
-                          color: Colors.grey,
-                        ),
+                        const Icon(Icons.location_on, size: 14, color: Colors.grey),
                         const SizedBox(width: 2),
                         Text(
                           service.ville.isNotEmpty
@@ -190,7 +202,7 @@ class ServiceCard extends StatelessWidget {
     );
   }
 
-  // Image placeholder quand pas de photo
+  // Image placeholder quand pas de photo ou erreur
   Widget _placeholderImage() {
     return Container(
       height: 160,

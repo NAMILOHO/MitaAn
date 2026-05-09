@@ -1,51 +1,47 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart'; // Pour debugPrint
 import 'package:image_picker/image_picker.dart';
+
 import '../models/service_model.dart';
+import 'cloudinary_service.dart';
 
 class ServiceFirestore {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
   final ImagePicker _picker = ImagePicker();
 
   // ─────────────────────────────────────────
-  // CHOISIR PLUSIEURS PHOTOS
+  // CHOISIR PLUSIEURS PHOTOS (Optimisé)
   // ─────────────────────────────────────────
   Future<List<File>> pickImages() async {
-    final List<XFile> picked = await _picker.pickMultiImage(
-      maxWidth: 800,
-      maxHeight: 800,
-      imageQuality: 75,
-    );
-    return picked.map((xfile) => File(xfile.path)).toList();
+    try {
+      final List<XFile> picked = await _picker.pickMultiImage(
+        maxWidth: 600,
+        maxHeight: 600,
+        imageQuality: 65,
+      );
+      return picked.map((xfile) => File(xfile.path)).toList();
+    } catch (e) {
+      throw 'Erreur lors de la sélection des photos';
+    }
   }
 
   // ─────────────────────────────────────────
-  // UPLOADER LES PHOTOS SUR FIREBASE STORAGE
+  // UPLOADER LES PHOTOS SUR CLOUDINARY (Avec logs)
   // ─────────────────────────────────────────
   Future<List<String>> uploadServicePhotos(
     String userId,
     List<File> images,
   ) async {
-    List<String> urls = [];
+    debugPrint('📸 Upload de ${images.length} images vers Cloudinary...');
 
-    for (int i = 0; i < images.length; i++) {
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      // Chemin : services/userId_timestamp_index.jpg
-      final ref = _storage
-          .ref()
-          .child('services/${userId}_${timestamp}_$i.jpg');
+    final cloudinary = CloudinaryService();
+    final urls = await cloudinary.uploadImages(
+      images,
+      folder: 'mitan/services/$userId',
+    );
 
-      await ref.putFile(
-        images[i],
-        SettableMetadata(contentType: 'image/jpeg'),
-      );
-
-      final url = await ref.getDownloadURL();
-      urls.add(url);
-    }
-
+    debugPrint('✅ ${urls.length} URLs obtenues avec succès');
     return urls;
   }
 
@@ -64,7 +60,6 @@ class ServiceFirestore {
     required String ville,
   }) async {
     final docRef = _firestore.collection('services').doc();
-
     final service = ServiceModel(
       id: docRef.id,
       userId: userId,
@@ -89,54 +84,68 @@ class ServiceFirestore {
   }
 
   // ─────────────────────────────────────────
-  // RÉCUPÉRER TOUTES LES ANNONCES ACTIVES
+  // RÉCUPÉRER TOUTES LES ANNONCES ACTIVES (Optimisé)
   // ─────────────────────────────────────────
-  Future<List<ServiceModel>> getAllServices() async {
-    final snapshot = await _firestore
-        .collection('services')
-        .where('isActive', isEqualTo: true)
-        .orderBy('createdAt', descending: true)
-        .get();
+  Future<List<ServiceModel>> getAllServices({int limit = 20}) async {
+    try {
+      final snapshot = await _firestore
+          .collection('services')
+          .where('isActive', isEqualTo: true)
+          .orderBy('createdAt', descending: true)
+          .limit(limit)
+          .get();
 
-    return snapshot.docs
-        .map((doc) => ServiceModel.fromMap(doc.data(), doc.id))
-        .toList();
+      return snapshot.docs
+          .map((doc) => ServiceModel.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      throw 'Erreur chargement annonces : $e';
+    }
   }
 
   // ─────────────────────────────────────────
   // RÉCUPÉRER LES ANNONCES PAR CATÉGORIE
   // ─────────────────────────────────────────
-  Future<List<ServiceModel>> getServicesByCategory(
-      String categorie) async {
-    final snapshot = await _firestore
-        .collection('services')
-        .where('isActive', isEqualTo: true)
-        .where('categorie', isEqualTo: categorie)
-        .orderBy('createdAt', descending: true)
-        .get();
+  Future<List<ServiceModel>> getServicesByCategory(String categorie) async {
+    try {
+      final snapshot = await _firestore
+          .collection('services')
+          .where('isActive', isEqualTo: true)
+          .where('categorie', isEqualTo: categorie)
+          .orderBy('createdAt', descending: true)
+          .limit(30)
+          .get();
 
-    return snapshot.docs
-        .map((doc) => ServiceModel.fromMap(doc.data(), doc.id))
-        .toList();
+      return snapshot.docs
+          .map((doc) => ServiceModel.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      throw 'Erreur chargement annonces par catégorie : $e';
+    }
   }
 
   // ─────────────────────────────────────────
   // RÉCUPÉRER LES ANNONCES D'UN UTILISATEUR
   // ─────────────────────────────────────────
   Future<List<ServiceModel>> getUserServices(String userId) async {
-    final snapshot = await _firestore
-        .collection('services')
-        .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
-        .get();
+    try {
+      final snapshot = await _firestore
+          .collection('services')
+          .where('userId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
+          .limit(50)
+          .get();
 
-    return snapshot.docs
-        .map((doc) => ServiceModel.fromMap(doc.data(), doc.id))
-        .toList();
+      return snapshot.docs
+          .map((doc) => ServiceModel.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      throw 'Erreur chargement mes annonces : $e';
+    }
   }
 
   // ─────────────────────────────────────────
-  // SUPPRIMER UNE ANNONCE
+  // SUPPRIMER UNE ANNONCE (désactivation)
   // ─────────────────────────────────────────
   Future<void> deleteService(String serviceId) async {
     await _firestore.collection('services').doc(serviceId).update({
