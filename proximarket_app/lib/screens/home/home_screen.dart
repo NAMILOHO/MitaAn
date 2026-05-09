@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 
 import '../services/services_list_screen.dart';
 import '../services/create_service_screen.dart';
 import '../profile/profile_screen.dart';
 import '../chat/chat_list_screen.dart';
+import '../services/service_detail_screen.dart';
 
 import '../../services/location_service.dart';
 import '../../services/user_service.dart';
 import '../../models/user_model.dart';
+import '../../providers/service_provider.dart';
+import '../../widgets/service_card.dart';
 
 // ─────────────────────────────────────────────────
 // ÉCRAN PRINCIPAL AVEC NAVIGATION
@@ -92,7 +96,6 @@ class _HomeTab extends StatefulWidget {
 class _HomeTabState extends State<_HomeTab> {
   final LocationService _locationService = LocationService();
   final UserService _userService = UserService();
-
   UserModel? _userModel;
   bool _isLoadingLocation = false;
   String _locationStatus = 'Position non définie';
@@ -103,6 +106,10 @@ class _HomeTabState extends State<_HomeTab> {
   void initState() {
     super.initState();
     _loadUser();
+    // Charger les annonces au démarrage
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ServiceProvider>().loadAllServices();
+    });
   }
 
   Future<void> _loadUser() async {
@@ -123,20 +130,14 @@ class _HomeTabState extends State<_HomeTab> {
       _isLoadingLocation = true;
       _locationStatus = 'Récupération en cours...';
     });
-
     try {
       final uid = FirebaseAuth.instance.currentUser!.uid;
-
       await _locationService.saveUserLocation(uid);
-
       final updated = await _userService.getUserProfile(uid);
-
       setState(() {
         _userModel = updated;
-        _locationStatus =
-            'Position mise à jour ✅\n${updated?.ville ?? ''}';
+        _locationStatus = 'Position mise à jour ✅\n${updated?.ville ?? ''}';
       });
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -147,7 +148,6 @@ class _HomeTabState extends State<_HomeTab> {
       }
     } catch (e) {
       setState(() => _locationStatus = 'Erreur : $e');
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -165,7 +165,6 @@ class _HomeTabState extends State<_HomeTab> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
-
       appBar: AppBar(
         backgroundColor: primaryColor,
         elevation: 0,
@@ -190,13 +189,11 @@ class _HomeTabState extends State<_HomeTab> {
           ],
         ),
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             // ── Bonjour ──
             Text(
               'Bonjour, ${_userModel?.nom.split(' ').first ?? 'là'} 👋',
@@ -206,7 +203,6 @@ class _HomeTabState extends State<_HomeTab> {
               ),
             ),
             const SizedBox(height: 4),
-
             const Text(
               'Que cherchez-vous aujourd\'hui ?',
               style: TextStyle(color: Colors.grey, fontSize: 14),
@@ -230,8 +226,7 @@ class _HomeTabState extends State<_HomeTab> {
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.my_location,
-                          color: Colors.white, size: 20),
+                      Icon(Icons.my_location, color: Colors.white, size: 20),
                       SizedBox(width: 8),
                       Text(
                         'Ma localisation',
@@ -244,19 +239,15 @@ class _HomeTabState extends State<_HomeTab> {
                     ],
                   ),
                   const SizedBox(height: 8),
-
                   Text(
                     _locationStatus,
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 13),
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                   const SizedBox(height: 16),
-
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed:
-                          _isLoadingLocation ? null : _updateLocation,
+                      onPressed: _isLoadingLocation ? null : _updateLocation,
                       icon: _isLoadingLocation
                           ? const SizedBox(
                               width: 16,
@@ -266,8 +257,7 @@ class _HomeTabState extends State<_HomeTab> {
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Icon(Icons.gps_fixed,
-                              color: primaryColor),
+                          : const Icon(Icons.gps_fixed, color: primaryColor),
                       label: Text(
                         _isLoadingLocation
                             ? 'Récupération...'
@@ -288,10 +278,9 @@ class _HomeTabState extends State<_HomeTab> {
                 ],
               ),
             ),
-
             const SizedBox(height: 24),
 
-            // ── Catégories ──
+            // ── Catégories (cliquables) ──
             const Text(
               'Catégories',
               style: TextStyle(
@@ -300,7 +289,6 @@ class _HomeTabState extends State<_HomeTab> {
               ),
             ),
             const SizedBox(height: 12),
-
             GridView.count(
               crossAxisCount: 4,
               shrinkWrap: true,
@@ -318,10 +306,9 @@ class _HomeTabState extends State<_HomeTab> {
                 _buildCategory(Icons.more_horiz, 'Autre'),
               ],
             ),
-
             const SizedBox(height: 24),
 
-            // ── Services ──
+            // ── Services près de vous ──
             const Text(
               'Services près de vous',
               style: TextStyle(
@@ -329,27 +316,71 @@ class _HomeTabState extends State<_HomeTab> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(height: 12),
+            Consumer<ServiceProvider>(
+              builder: (context, provider, _) {
+                if (provider.isLoading) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: primaryColor),
+                  );
+                }
 
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Column(
-                children: [
-                  Icon(Icons.search_off, size: 48, color: Colors.grey),
-                  SizedBox(height: 12),
-                  Text(
-                    'Allez dans "Rechercher" pour voir les annonces !',
-                    style: TextStyle(color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+                if (provider.services.isEmpty) {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Column(
+                      children: [
+                        Icon(Icons.search_off, size: 48, color: Colors.grey),
+                        SizedBox(height: 12),
+                        Text(
+                          'Aucune annonce disponible',
+                          style: TextStyle(color: Colors.grey),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final preview = provider.services.take(3).toList();
+                return Column(
+                  children: [
+                    ...preview.map((service) => ServiceCard(
+                          service: service,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ServiceDetailScreen(service: service),
+                            ),
+                          ),
+                        )),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          // Aller à l'onglet Rechercher
+                        },
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: primaryColor),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Voir toutes les annonces',
+                          style: TextStyle(color: primaryColor),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -357,27 +388,41 @@ class _HomeTabState extends State<_HomeTab> {
     );
   }
 
+  // ====================== VERSION MISE À JOUR ======================
   Widget _buildCategory(IconData icon, String label) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: primaryColor.withValues(alpha:0.1),
-            borderRadius: BorderRadius.circular(14),
+    return GestureDetector(
+      onTap: () {
+        // Charger les annonces par catégorie
+        context.read<ServiceProvider>().loadServicesByCategory(label);
+        // Naviguer vers la liste
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const ServicesListScreen(),
           ),
-          child: Icon(icon, color: primaryColor, size: 26),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 10),
-          textAlign: TextAlign.center,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
+        );
+      },
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: primaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: primaryColor, size: 26),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 10),
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 }

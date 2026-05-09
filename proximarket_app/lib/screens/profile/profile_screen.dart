@@ -10,6 +10,7 @@ import '../../providers/auth_provider.dart' as app_auth;
 
 import 'edit_profile_screen.dart';
 import '../services/my_services_screen.dart';
+import '../auth/login_screen.dart';   // ← Import ajouté
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -201,8 +202,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: const Icon(Icons.logout, color: Colors.red),
             onPressed: () async {
               await context.read<app_auth.AuthProvider>().signOut();
-              // La déconnexion est détectée automatiquement par AuthWrapper
-              // Pas besoin de Navigator.pushAndRemoveUntil
+              if (!mounted) return;
+
+              // Navigation manuelle vers LoginScreen
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
             },
           )
         ],

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../providers/auth_provider.dart';
+import '../home/home_screen.dart';        // ← Import ajouté
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -14,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
   bool _isLoading = false;
   bool _passwordVisible = false;
 
@@ -26,6 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // ====================== CORRECTION : Méthode _login ======================
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -40,7 +44,14 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    if (!success) {
+    if (success) {
+      // Navigation manuelle avec suppression de l'historique
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (route) => false,
+      );
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.errorMessage ?? 'Erreur de connexion'),
@@ -48,9 +59,10 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     }
-    // Si success → AuthWrapper détecte le changement et redirige automatiquement
   }
+  // ============================================================================
 
+  // ====================== CORRECTION : Méthode _loginWithGoogle ======================
   Future<void> _loginWithGoogle() async {
     setState(() => _isLoading = true);
 
@@ -60,7 +72,13 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    if (!success) {
+    if (success) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (route) => false,
+      );
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.errorMessage ?? 'Erreur Google'),
@@ -69,6 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     }
   }
+  // ============================================================================
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +102,6 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 40),
-
                 // Logo MitaAn
                 Container(
                   width: 90,
@@ -193,13 +211,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     child: _isLoading
-                        ? const CircularProgressIndicator(
-                            color: Colors.white)
+                        ? const CircularProgressIndicator(color: Colors.white)
                         : const Text(
                             'Se connecter',
                             style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold),
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                   ),
                 ),
@@ -211,8 +227,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Expanded(child: Divider()),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('ou',
-                          style: TextStyle(color: Colors.grey)),
+                      child: Text('ou', style: TextStyle(color: Colors.grey)),
                     ),
                     Expanded(child: Divider()),
                   ],
@@ -229,8 +244,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         size: 28, color: Colors.red),
                     label: const Text(
                       'Continuer avec Google',
-                      style: TextStyle(
-                          fontSize: 15, color: Colors.black87),
+                      style: TextStyle(fontSize: 15, color: Colors.black87),
                     ),
                     style: OutlinedButton.styleFrom(
                       shape: RoundedRectangleBorder(
@@ -245,8 +259,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 GestureDetector(
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (_) => const RegisterScreen()),
+                    MaterialPageRoute(builder: (_) => const RegisterScreen()),
                   ),
                   child: RichText(
                     text: const TextSpan(

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
-import 'login_screen.dart';   // ← Import ajouté
+import '../home/home_screen.dart';      // ← Import ajouté
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -47,7 +48,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // ✅ REGISTER AVEC PROVIDER
+  // ====================== CORRECTION : Méthode _register ======================
   void _register() async {
     if (_formKey.currentState!.validate()) {
       if (_isProfessional && _selectedCategory == null) {
@@ -72,9 +73,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
         categorie: _selectedCategory ?? '',
       );
 
+      if (!mounted) return;
       setState(() => _isLoading = false);
 
-      if (!success && mounted) {
+      if (success) {
+        // Navigation directe vers HomeScreen après inscription réussie
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          (route) => false,
+        );
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -84,18 +93,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         );
       }
-
-      if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Compte créé avec succès 🎉'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
-      }
     }
   }
+  // ============================================================================
 
   @override
   Widget build(BuildContext context) {

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../utils/app_colors.dart';
-import 'home/home_screen.dart';
+import '../main.dart';           // ← Import ajouté pour AuthWrapper
 import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -21,7 +22,6 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
@@ -50,6 +50,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
+    // Navigation après le splash
     Future.delayed(const Duration(milliseconds: 3000), () {
       if (mounted) _navigate();
     });
@@ -61,19 +62,21 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
+  // ====================== CORRECTION : Navigation via AuthWrapper ======================
   void _navigate() {
     final user = FirebaseAuth.instance.currentUser;
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            user != null ? const HomeScreen() : const OnboardingScreen(),
+            user != null ? const AuthWrapper() : const OnboardingScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) =>
             FadeTransition(opacity: animation, child: child),
         transitionDuration: const Duration(milliseconds: 500),
       ),
     );
   }
+  // ============================================================================
 
   @override
   Widget build(BuildContext context) {
@@ -124,7 +127,6 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
                       const SizedBox(height: 32),
-
                       // ── Nom app ──
                       Transform.translate(
                         offset: Offset(0, _slideAnim.value),
@@ -139,7 +141,6 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
                       const SizedBox(height: 8),
-
                       // ── Slogan ──
                       Transform.translate(
                         offset: Offset(0, _slideAnim.value),
@@ -153,7 +154,6 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
                       const SizedBox(height: 80),
-
                       // ── Loader ──
                       const SizedBox(
                         width: 28,

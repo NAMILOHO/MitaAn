@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../../models/user_model.dart';
 import '../../models/message_model.dart';
 import '../../services/chat_service.dart';
@@ -7,7 +8,6 @@ import '../../widgets/message_bubble.dart';
 
 class ChatScreen extends StatefulWidget {
   final UserModel otherUser;
-
   const ChatScreen({super.key, required this.otherUser});
 
   @override
@@ -40,28 +40,42 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
+  // ====================== CORRECTION : Méthode _sendMessage ======================
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
     _messageController.clear();
 
-    await _chatService.sendMessage(
-      senderId: _myUid,
-      receiverId: widget.otherUser.uid,
-      text: text,
-    );
-
-    // Scroll vers le bas après envoi
-    await Future.delayed(const Duration(milliseconds: 100));
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
+    try {
+      await _chatService.sendMessage(
+        senderId: _myUid,
+        receiverId: widget.otherUser.uid,
+        text: text,
+        senderName: FirebaseAuth.instance.currentUser?.displayName ?? 'Utilisateur',
       );
+
+      // Scroll vers le bas après envoi
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur envoi : $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
+  // ============================================================================
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +132,6 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       body: Column(
         children: [
-
           // ── Liste des messages ──
           Expanded(
             child: StreamBuilder<List<MessageModel>>(
@@ -129,9 +142,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: CircularProgressIndicator(color: primaryColor),
                   );
                 }
-
                 final messages = snapshot.data ?? [];
-
                 if (messages.isEmpty) {
                   return Center(
                     child: Column(

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../models/service_model.dart';
 import '../../models/user_model.dart';
 import '../../services/user_service.dart';
 import '../../utils/distance_helper.dart';
+import '../chat/chat_screen.dart';   // ← Import ajouté
 
 class ServiceDetailScreen extends StatefulWidget {
   final ServiceModel service;
@@ -42,41 +44,76 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     });
   }
 
+  // ====================== CORRECTION 1 : Appeler & WhatsApp ======================
   Future<void> _callOwner() async {
-    if (_owner == null || _owner!.phone.isEmpty) return;
+    if (_owner == null || _owner!.phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Numéro de téléphone non disponible'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     final uri = Uri(scheme: 'tel', path: _owner!.phone);
-    if (await canLaunchUrl(uri)) {
+    try {
       await launchUrl(uri);
-    } else {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Impossible de passer l\'appel')),
+          const SnackBar(
+            content: Text('Impossible de passer l\'appel'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
 
   Future<void> _whatsappOwner() async {
-    if (_owner == null || _owner!.phone.isEmpty) return;
-    final phone = _owner!.phone
+    if (_owner == null || _owner!.phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Numéro de téléphone non disponible'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Nettoyer le numéro
+    String phone = _owner!.phone
         .replaceAll(' ', '')
         .replaceAll('-', '')
         .replaceAll('+', '');
+
+    // Ajouter indicatif Côte d'Ivoire si absent
+    if (!phone.startsWith('225') && phone.length <= 10) {
+      phone = '225$phone';
+    }
+
     final message = Uri.encodeComponent(
-      'Bonjour, je vous contacte via ProxiMarket '
+      'Bonjour, je vous contacte via MitaAn '
       'concernant votre annonce : ${widget.service.titre}',
     );
+
     final uri = Uri.parse('https://wa.me/$phone?text=$message');
-    if (await canLaunchUrl(uri)) {
+
+    try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('WhatsApp n\'est pas installé')),
+          const SnackBar(
+            content: Text('WhatsApp n\'est pas installé'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
+  // ============================================================================
 
   bool get _isMyService {
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -89,7 +126,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       backgroundColor: const Color(0xFFF5F5F5),
       body: CustomScrollView(
         slivers: [
-
           // ── AppBar avec photos ──
           SliverAppBar(
             expandedHeight: 280,
@@ -140,7 +176,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   : _placeholder(),
             ),
           ),
-
           // ── Contenu ──
           SliverToBoxAdapter(
             child: Padding(
@@ -148,7 +183,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   // Titre + Catégorie
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,9 +372,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: _isMyService
-          ? _myServiceBar()
-          : _contactBar(),
+      bottomNavigationBar: _isMyService ? _myServiceBar() : _contactBar(),
     );
   }
 
@@ -366,46 +398,90 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     );
   }
 
+  // ====================== MISE À JOUR : _contactBar avec Messagerie ======================
   Widget _contactBar() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       color: Colors.white,
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: _owner?.phone.isNotEmpty == true
-                  ? _callOwner
-                  : null,
-              icon: const Icon(Icons.phone, color: primaryColor),
-              label: const Text('Appeler',
-                  style: TextStyle(
+          Row(
+            children: [
+              // Bouton Appeler
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _callOwner,
+                  icon: const Icon(Icons.phone, color: primaryColor),
+                  label: const Text(
+                    'Appeler',
+                    style: TextStyle(
                       color: primaryColor,
-                      fontWeight: FontWeight.bold)),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                side: const BorderSide(color: primaryColor),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(color: primaryColor),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: _owner?.phone.isNotEmpty == true
-                  ? _whatsappOwner
-                  : null,
-              icon: const Icon(Icons.chat, color: Colors.white),
-              label: const Text('WhatsApp',
-                  style: TextStyle(
+              const SizedBox(width: 8),
+
+              // Bouton WhatsApp
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _whatsappOwner,
+                  icon: const Icon(Icons.chat, color: Colors.white),
+                  label: const Text(
+                    'WhatsApp',
+                    style: TextStyle(
                       color: Colors.white,
-                      fontWeight: FontWeight.bold)),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF25D366),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Bouton Messagerie MitaAn
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _owner != null
+                  ? () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChatScreen(otherUser: _owner!),
+                        ),
+                      )
+                  : null,
+              icon: const Icon(Icons.message_outlined, color: Colors.white),
+              label: const Text(
+                'Messagerie MitaAn',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF25D366),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                backgroundColor: primaryColor,
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -413,6 +489,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       ),
     );
   }
+  // ============================================================================
 
   Widget _placeholder() {
     return Container(

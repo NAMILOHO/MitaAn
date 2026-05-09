@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+
 import '../../providers/service_provider.dart';
 import '../../services/service_firestore.dart';
 import '../../services/location_service.dart';
@@ -90,7 +91,6 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
         });
       }
     } catch (e) {
-      // Vérifier mounted AVANT d'utiliser context après await
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
@@ -166,8 +166,6 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
           onPressed: () {
             if (Navigator.canPop(context)) {
               Navigator.pop(context);
-            } else {
-              Navigator.pushReplacementNamed(context, '/home');
             }
           },
         ),
