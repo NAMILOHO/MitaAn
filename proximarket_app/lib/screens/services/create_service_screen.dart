@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../providers/service_provider.dart';
 import '../../services/service_firestore.dart';
 import '../../services/location_service.dart';
+import '../home/home_screen.dart';   // ← Pour accéder à HomeScreenState
 
 class CreateServiceScreen extends StatefulWidget {
   const CreateServiceScreen({super.key});
@@ -99,7 +100,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
     setState(() => _selectedImages.removeAt(index));
   }
 
-  // ====================== CORRECTION : Méthode _publish ======================
+  // Publier l'annonce
   Future<void> _publish() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCategory == null) {
@@ -141,7 +142,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
         ),
       );
 
-      // Vider le formulaire pour permettre une nouvelle publication
+      // Vider le formulaire
       _formKey.currentState!.reset();
       _titreController.clear();
       _descriptionController.clear();
@@ -152,7 +153,6 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
         _selectedImages = [];
       });
 
-      // Recharger la localisation
       _loadLocation();
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -163,7 +163,6 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
       );
     }
   }
-  // ============================================================================
 
   @override
   Widget build(BuildContext context) {
@@ -175,8 +174,15 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () {
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
+            // Cherche le HomeScreen parent et retourne à l'onglet Accueil
+            final homeState = context.findAncestorStateOfType<HomeScreenState>();
+            if (homeState != null) {
+              homeState.changeTab(0);
+            } else {
+              // Fallback si pas trouvé
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
             }
           },
         ),
@@ -195,13 +201,10 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Photos ──
+              // Photos
               const Text(
                 'Photos (max 4)',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
               const SizedBox(height: 10),
               SizedBox(
@@ -217,26 +220,15 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                           height: 100,
                           margin: const EdgeInsets.only(right: 10),
                           decoration: BoxDecoration(
-                            border: Border.all(
-                              color: primaryColor,
-                              width: 2,
-                              style: BorderStyle.solid,
-                            ),
+                            border: Border.all(color: primaryColor, width: 2),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.add_photo_alternate,
-                                  color: primaryColor, size: 30),
+                              Icon(Icons.add_photo_alternate, color: primaryColor, size: 30),
                               SizedBox(height: 4),
-                              Text(
-                                'Ajouter',
-                                style: TextStyle(
-                                  color: primaryColor,
-                                  fontSize: 12,
-                                ),
-                              ),
+                              Text('Ajouter', style: TextStyle(color: primaryColor, fontSize: 12)),
                             ],
                           ),
                         ),
@@ -266,11 +258,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                                   color: Colors.red,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(
-                                  Icons.close,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
+                                child: const Icon(Icons.close, color: Colors.white, size: 18),
                               ),
                             ),
                           ),
@@ -295,9 +283,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                 initialValue: _selectedCategory,
                 decoration: _inputDecoration('Catégorie', Icons.category),
                 hint: const Text('Choisir une catégorie'),
-                items: _categories.map((cat) {
-                  return DropdownMenuItem(value: cat, child: Text(cat));
-                }).toList(),
+                items: _categories.map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),
                 onChanged: (v) => setState(() => _selectedCategory = v),
               ),
               const SizedBox(height: 16),
@@ -348,10 +334,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                       const SizedBox(
                         width: 16,
                         height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: primaryColor,
-                        ),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor),
                       ),
                   ],
                 ),
@@ -367,9 +350,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
@@ -380,10 +361,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                             SizedBox(width: 8),
                             Text(
                               'Publier l\'annonce',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),

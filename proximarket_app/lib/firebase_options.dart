@@ -41,50 +41,52 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAHxsOJ07v57Wxpf_q2Jn_6Jmbre1SJTzs',
-    appId: '1:725230005160:web:0554f9bc29d4b6c6110b9d',
-    messagingSenderId: '725230005160',
-    projectId: 'proximarket-e9d41',
-    authDomain: 'proximarket-e9d41.firebaseapp.com',
-    storageBucket: 'proximarket-e9d41.firebasestorage.app',
-    measurementId: 'G-8D8BWDNHMN',
+    apiKey: 'AIzaSyAu3PBi5A89V2OH3AonVZngMe4ZSWrB-mo',
+    appId: '1:112476175005:web:da386cd489799ccb0ff274',
+    messagingSenderId: '112476175005',
+    projectId: 'mitaan-fea0b',
+    authDomain: 'mitaan-fea0b.firebaseapp.com',
+    storageBucket: 'mitaan-fea0b.firebasestorage.app',
+    measurementId: 'G-P6S3MJEFXP',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCNJ44119AvMnIsmonzkqLv0zXyekUycj4',
-    appId: '1:725230005160:android:0c6e30a25f9e12d9110b9d',
-    messagingSenderId: '725230005160',
-    projectId: 'proximarket-e9d41',
-    storageBucket: 'proximarket-e9d41.firebasestorage.app',
+    apiKey: 'AIzaSyA2ctoRl_AJZiOXg9oR70DScRXWWvsQYBs',
+    appId: '1:112476175005:android:e75f5efddd73cb8b0ff274',
+    messagingSenderId: '112476175005',
+    projectId: 'mitaan-fea0b',
+    storageBucket: 'mitaan-fea0b.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCaf0rWaNBviv79AlP_A39WbGu1hBbNUPg',
-    appId: '1:725230005160:ios:b4a79cfa353570ca110b9d',
-    messagingSenderId: '725230005160',
-    projectId: 'proximarket-e9d41',
-    storageBucket: 'proximarket-e9d41.firebasestorage.app',
-    iosClientId: '725230005160-j28gbiab0omp4deuufsv0t7hcgr1u6f1.apps.googleusercontent.com',
+    apiKey: 'AIzaSyB8Em4-EJpgbG722ftzHNH_GevALZwJjMg',
+    appId: '1:112476175005:ios:d5d98c0ec2e3761b0ff274',
+    messagingSenderId: '112476175005',
+    projectId: 'mitaan-fea0b',
+    storageBucket: 'mitaan-fea0b.firebasestorage.app',
+    androidClientId: '112476175005-0oi14667ofnp1jq545ijhm3lbdbgbbj2.apps.googleusercontent.com',
+    iosClientId: '112476175005-g4vs5t2sqg741rkfl7fembsaicljcudl.apps.googleusercontent.com',
     iosBundleId: 'com.example.proximarketApp',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyCaf0rWaNBviv79AlP_A39WbGu1hBbNUPg',
-    appId: '1:725230005160:ios:b4a79cfa353570ca110b9d',
-    messagingSenderId: '725230005160',
-    projectId: 'proximarket-e9d41',
-    storageBucket: 'proximarket-e9d41.firebasestorage.app',
-    iosClientId: '725230005160-j28gbiab0omp4deuufsv0t7hcgr1u6f1.apps.googleusercontent.com',
+    apiKey: 'AIzaSyB8Em4-EJpgbG722ftzHNH_GevALZwJjMg',
+    appId: '1:112476175005:ios:d5d98c0ec2e3761b0ff274',
+    messagingSenderId: '112476175005',
+    projectId: 'mitaan-fea0b',
+    storageBucket: 'mitaan-fea0b.firebasestorage.app',
+    androidClientId: '112476175005-0oi14667ofnp1jq545ijhm3lbdbgbbj2.apps.googleusercontent.com',
+    iosClientId: '112476175005-g4vs5t2sqg741rkfl7fembsaicljcudl.apps.googleusercontent.com',
     iosBundleId: 'com.example.proximarketApp',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyAHxsOJ07v57Wxpf_q2Jn_6Jmbre1SJTzs',
-    appId: '1:725230005160:web:a05b8b8798002ece110b9d',
-    messagingSenderId: '725230005160',
-    projectId: 'proximarket-e9d41',
-    authDomain: 'proximarket-e9d41.firebaseapp.com',
-    storageBucket: 'proximarket-e9d41.firebasestorage.app',
-    measurementId: 'G-RK7WCSFVD1',
+    apiKey: 'AIzaSyAu3PBi5A89V2OH3AonVZngMe4ZSWrB-mo',
+    appId: '1:112476175005:web:5863406cf3fc44350ff274',
+    messagingSenderId: '112476175005',
+    projectId: 'mitaan-fea0b',
+    authDomain: 'mitaan-fea0b.firebaseapp.com',
+    storageBucket: 'mitaan-fea0b.firebasestorage.app',
+    measurementId: 'G-XPNP7LM0FM',
   );
 }
