@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import '../../services/chat_service.dart';
 import '../../services/user_service.dart';
 import '../../models/user_model.dart';
-
-import '../services/services_list_screen.dart'; // ✅ AJOUT
+import '../services/services_list_screen.dart';
 import 'chat_screen.dart';
 
 class ChatListScreen extends StatelessWidget {
@@ -15,13 +13,21 @@ class ChatListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final myUid = FirebaseAuth.instance.currentUser!.uid;
+    final User? currentUser = FirebaseAuth.instance.currentUser;
+
+    // Sécurité : si pas connecté
+    if (currentUser == null) {
+      return const Scaffold(
+        body: Center(child: Text("Vous devez être connecté")),
+      );
+    }
+
+    final String myUid = currentUser.uid;
     final ChatService chatService = ChatService();
     final UserService userService = UserService();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
-
       appBar: AppBar(
         backgroundColor: primaryColor,
         automaticallyImplyLeading: false,
@@ -33,11 +39,22 @@ class ChatListScreen extends StatelessWidget {
           ),
         ),
       ),
-
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: chatService.getConversations(myUid),
         builder: (context, snapshot) {
-          // ───────── LOADING ─────────
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text('Erreur: ${snapshot.error}'),
+                ],
+              ),
+            );
+          }
+
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(color: primaryColor),
@@ -46,7 +63,6 @@ class ChatListScreen extends StatelessWidget {
 
           final conversations = snapshot.data ?? [];
 
-          // ───────── EMPTY STATE (CORRIGÉ) ─────────
           if (conversations.isEmpty) {
             return Center(
               child: Padding(
@@ -56,9 +72,7 @@ class ChatListScreen extends StatelessWidget {
                   children: [
                     const Icon(Icons.chat_bubble_outline,
                         size: 80, color: Colors.grey),
-
                     const SizedBox(height: 16),
-
                     const Text(
                       'Aucune conversation',
                       style: TextStyle(
@@ -66,18 +80,13 @@ class ChatListScreen extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-
                     const SizedBox(height: 8),
-
                     const Text(
                       'Contactez un prestataire pour démarrer une discussion.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Colors.grey),
                     ),
-
                     const SizedBox(height: 24),
-
-                    // ✅ BOUTON AJOUTÉ
                     ElevatedButton.icon(
                       onPressed: () {
                         Navigator.push(
@@ -101,35 +110,34 @@ class ChatListScreen extends StatelessWidget {
             );
           }
 
-          // ───────── LISTE DES CONVERSATIONS ─────────
           return ListView.builder(
             padding: const EdgeInsets.all(12),
             itemCount: conversations.length,
             itemBuilder: (context, index) {
               final conv = conversations[index];
-
-              final participants =
-                  List<String>.from(conv['participants'] ?? []);
-
+              final participants = List<String>.from(conv['participants'] ?? []);
               final otherUid = participants.firstWhere(
                 (id) => id != myUid,
                 orElse: () => '',
               );
 
-              if (otherUid.isEmpty) return const SizedBox();
+              if (otherUid.isEmpty) return const SizedBox.shrink();
 
               return FutureBuilder<UserModel?>(
                 future: userService.getUserProfile(otherUid),
                 builder: (context, userSnap) {
-                  if (!userSnap.hasData) {
-                    return const SizedBox(height: 72);
+                  if (userSnap.connectionState == ConnectionState.waiting) {
+                    return const SizedBox(height: 80); // Placeholder
+                  }
+
+                  if (!userSnap.hasData || userSnap.data == null) {
+                    return const SizedBox.shrink();
                   }
 
                   final otherUser = userSnap.data!;
-
-                  final lastMessage = conv['lastMessage'] ?? '';
+                  final lastMessage = conv['lastMessage']?.toString() ?? '';
                   final unread = conv['unreadCount'] ?? 0;
-                  final lastSenderId = conv['lastSenderId'] ?? '';
+                  final lastSenderId = conv['lastSenderId']?.toString() ?? '';
                   final isLastMine = lastSenderId == myUid;
 
                   return GestureDetector(
@@ -137,8 +145,7 @@ class ChatListScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              ChatScreen(otherUser: otherUser),
+                          builder: (_) => ChatScreen(otherUser: otherUser),
                         ),
                       );
                     },
@@ -150,7 +157,7 @@ class ChatListScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha:0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -158,14 +165,12 @@ class ChatListScreen extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
-                          // ───── AVATAR ─────
                           CircleAvatar(
                             radius: 26,
                             backgroundColor: const Color(0xFFE0F2EE),
-                            backgroundImage:
-                                otherUser.photoUrl.isNotEmpty
-                                    ? NetworkImage(otherUser.photoUrl)
-                                    : null,
+                            backgroundImage: otherUser.photoUrl.isNotEmpty
+                                ? NetworkImage(otherUser.photoUrl)
+                                : null,
                             child: otherUser.photoUrl.isEmpty
                                 ? Text(
                                     otherUser.nom.isNotEmpty
@@ -179,10 +184,7 @@ class ChatListScreen extends StatelessWidget {
                                   )
                                 : null,
                           ),
-
                           const SizedBox(width: 12),
-
-                          // ───── INFOS ─────
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,9 +198,7 @@ class ChatListScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  isLastMine
-                                      ? 'Vous : $lastMessage'
-                                      : lastMessage,
+                                  isLastMine ? 'Vous : $lastMessage' : lastMessage,
                                   style: TextStyle(
                                     color: unread > 0 && !isLastMine
                                         ? Colors.black87
@@ -214,8 +214,6 @@ class ChatListScreen extends StatelessWidget {
                               ],
                             ),
                           ),
-
-                          // ───── BADGE ─────
                           if (unread > 0 && !isLastMine)
                             Container(
                               padding: const EdgeInsets.all(6),
