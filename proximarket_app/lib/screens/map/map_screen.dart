@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../services/location_service.dart';
 import '../../models/user_model.dart';
@@ -17,7 +16,12 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   static const Color primaryColor = Color(0xFF1D9E75);
 
-  final LocationService _locationService = LocationService();
+  // Position par défaut : Abidjan
+  static const LatLng _defaultPosition =
+      LatLng(5.3600, -4.0083);
+
+  final LocationService _locationService =
+      LocationService();
 
   LatLng? _userPosition;
   List<UserModel> _pros = [];
@@ -25,10 +29,30 @@ class _MapScreenState extends State<MapScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
-  final LatLng _defaultPosition = const LatLng(
-    5.3600,
-    -4.0083,
-  );
+  // Rayon de recherche
+  double _radiusKm = 20.0;
+
+  static const List<double> _rayonOptions = [
+    5,
+    10,
+    20,
+    50,
+  ];
+
+  // Filtre catégorie
+  String? _selectedCategorie;
+
+  static const List<String> _categories = [
+    'Tous',
+    'Artisan',
+    'Artiste',
+    'Éleveur',
+    'Commerçant',
+    'Plombier',
+    'Électricien',
+    'Menuisier',
+    'Autre',
+  ];
 
   @override
   void initState() {
@@ -55,10 +79,14 @@ class _MapScreenState extends State<MapScreen> {
       );
 
       await _loadPros();
+
+      if (!mounted) return;
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -72,28 +100,53 @@ class _MapScreenState extends State<MapScreen> {
   // CHARGER LES PRESTATAIRES
   // ─────────────────────────────────────────
   Future<void> _loadPros() async {
-    final snap = await FirebaseFirestore.instance
-        .collection('users')
-        .where('isPro', isEqualTo: true)
-        .get();
+    if (_userPosition == null) return;
 
-    final pros = snap.docs
-        .map(
-          (doc) => UserModel.fromMap(
-            doc.data(),
-            doc.id,
-          ),
-        )
-        .where(
-          (u) =>
-              u.gpsLat != 0.0 &&
-              u.gpsLng != 0.0,
-        )
-        .toList();
+    try {
+      final pros =
+          await _locationService.getNearbyPros(
+        myLat: _userPosition!.latitude,
+        myLng: _userPosition!.longitude,
+        radiusKm: _radiusKm,
+        categorieFilter:
+            _selectedCategorie == 'Tous'
+                ? null
+                : _selectedCategorie,
+      );
+
+      final myUid =
+          FirebaseAuth.instance.currentUser?.uid;
+
+      final filtered =
+          pros.where((u) => u.uid != myUid).toList();
+
+      if (mounted) {
+        setState(() {
+          _pros = filtered;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+        });
+      }
+    }
+  }
+
+  // ─────────────────────────────────────────
+  // APPLIQUER LES FILTRES
+  // ─────────────────────────────────────────
+  Future<void> _applyFilters() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    await _loadPros();
 
     if (mounted) {
       setState(() {
-        _pros = pros;
+        _isLoading = false;
       });
     }
   }
@@ -125,14 +178,14 @@ class _MapScreenState extends State<MapScreen> {
 
     // PRESTATAIRES
     for (final pro in _pros) {
-      final isSelf =
-          pro.uid ==
-              FirebaseAuth
-                  .instance
-                  .currentUser
-                  ?.uid;
-
-      if (isSelf) continue;
+      final distance = _userPosition != null
+          ? _locationService.calculateDistance(
+              _userPosition!.latitude,
+              _userPosition!.longitude,
+              pro.gpsLat,
+              pro.gpsLng,
+            )
+          : null;
 
       markers.add(
         Marker(
@@ -144,7 +197,10 @@ class _MapScreenState extends State<MapScreen> {
           height: 60,
           child: GestureDetector(
             onTap: () =>
-                _showProBottomSheet(pro),
+                _showProBottomSheet(
+              pro,
+              distance,
+            ),
             child: Column(
               mainAxisSize:
                   MainAxisSize.min,
@@ -164,9 +220,7 @@ class _MapScreenState extends State<MapScreen> {
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black
-                            .withOpacity(
-                          0.2,
-                        ),
+                            .withOpacity(0.25),
                         blurRadius: 4,
                         offset:
                             const Offset(
@@ -214,19 +268,8 @@ class _MapScreenState extends State<MapScreen> {
   // ─────────────────────────────────────────
   void _showProBottomSheet(
     UserModel pro,
+    double? distance,
   ) {
-    double? distance;
-
-    if (_userPosition != null) {
-      distance =
-          _locationService.calculateDistance(
-        _userPosition!.latitude,
-        _userPosition!.longitude,
-        pro.gpsLat,
-        pro.gpsLng,
-      );
-    }
-
     showModalBottomSheet(
       context: context,
       shape:
@@ -239,7 +282,12 @@ class _MapScreenState extends State<MapScreen> {
       builder:
           (_) => Padding(
         padding:
-            const EdgeInsets.all(20),
+            const EdgeInsets.fromLTRB(
+          20,
+          12,
+          20,
+          24,
+        ),
         child: Column(
           mainAxisSize:
               MainAxisSize.min,
@@ -370,14 +418,24 @@ class _MapScreenState extends State<MapScreen> {
                 ),
 
                 if (distance != null)
-                  Text(
-                    '${distance.toStringAsFixed(1)} km',
-                    style:
-                        const TextStyle(
-                      color:
-                          Colors.grey,
-                      fontSize: 13,
-                    ),
+                  Column(
+                    children: [
+                      const Icon(
+                        Icons.near_me,
+                        color:
+                            Colors.grey,
+                        size: 16,
+                      ),
+                      Text(
+                        '${distance.toStringAsFixed(1)} km',
+                        style:
+                            const TextStyle(
+                          color:
+                              Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
               ],
             ),
@@ -387,7 +445,6 @@ class _MapScreenState extends State<MapScreen> {
                 const SizedBox(
                   height: 12,
                 ),
-
                 Text(
                   pro.bio,
                   style:
@@ -403,38 +460,224 @@ class _MapScreenState extends State<MapScreen> {
                 ),
               ],
 
-            const SizedBox(
-              height: 12,
-            ),
-
             if (pro.ville.isNotEmpty)
-              Row(
-                children: [
-                  const Icon(
-                    Icons.location_on,
-                    color:
-                        Colors.grey,
-                    size: 16,
-                  ),
-                  const SizedBox(
-                    width: 4,
-                  ),
-                  Text(
-                    pro.ville,
-                    style:
-                        const TextStyle(
+              ...[
+                const SizedBox(
+                  height: 8,
+                ),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on,
                       color:
                           Colors.grey,
-                      fontSize: 13,
+                      size: 14,
+                    ),
+                    const SizedBox(
+                      width: 4,
+                    ),
+                    Text(
+                      pro.ville,
+                      style:
+                          const TextStyle(
+                        color:
+                            Colors.grey,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────
+  // FILTRES
+  // ─────────────────────────────────────────
+  void _showFiltersSheet() {
+    double tempRadius = _radiusKm;
+
+    String? tempCategorie =
+        _selectedCategorie;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape:
+          const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(
+          top: Radius.circular(20),
+        ),
+      ),
+      builder:
+          (ctx) => StatefulBuilder(
+        builder:
+            (ctx, setSheetState) =>
+                Padding(
+          padding:
+              const EdgeInsets.fromLTRB(
+            20,
+            12,
+            20,
+            32,
+          ),
+          child: Column(
+            mainAxisSize:
+                MainAxisSize.min,
+            crossAxisAlignment:
+                CrossAxisAlignment
+                    .start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration:
+                      BoxDecoration(
+                    color:
+                        Colors.grey[300],
+                    borderRadius:
+                        BorderRadius.circular(
+                      2,
                     ),
                   ),
-                ],
+                ),
               ),
 
-            const SizedBox(
-              height: 16,
-            ),
-          ],
+              const SizedBox(
+                height: 16,
+              ),
+
+              const Text(
+                'Filtres',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight:
+                      FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(
+                height: 20,
+              ),
+
+              Wrap(
+                spacing: 8,
+                children:
+                    _rayonOptions.map((r) {
+                  final isSelected =
+                      tempRadius == r;
+
+                  return ChoiceChip(
+                    label: Text(
+                      '${r.toInt()} km',
+                    ),
+                    selected:
+                        isSelected,
+                    selectedColor:
+                        primaryColor,
+                    labelStyle:
+                        TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : Colors.black87,
+                    ),
+                    onSelected:
+                        (_) =>
+                            setSheetState(
+                      () =>
+                          tempRadius =
+                              r,
+                    ),
+                  );
+                }).toList(),
+              ),
+
+              const SizedBox(
+                height: 20,
+              ),
+
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children:
+                    _categories.map((cat) {
+                  final isSelected =
+                      (tempCategorie ==
+                                  null &&
+                              cat ==
+                                  'Tous') ||
+                          tempCategorie ==
+                              cat;
+
+                  return ChoiceChip(
+                    label: Text(cat),
+                    selected:
+                        isSelected,
+                    selectedColor:
+                        primaryColor,
+                    labelStyle:
+                        TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : Colors.black87,
+                    ),
+                    onSelected:
+                        (_) =>
+                            setSheetState(
+                      () {
+                        tempCategorie =
+                            cat ==
+                                    'Tous'
+                                ? null
+                                : cat;
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+
+              const SizedBox(
+                height: 24,
+              ),
+
+              SizedBox(
+                width:
+                    double.infinity,
+                height: 50,
+                child:
+                    ElevatedButton(
+                  style:
+                      ElevatedButton.styleFrom(
+                    backgroundColor:
+                        primaryColor,
+                    foregroundColor:
+                        Colors.white,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(
+                        ctx);
+
+                    setState(() {
+                      _radiusKm =
+                          tempRadius;
+                      _selectedCategorie =
+                          tempCategorie;
+                    });
+
+                    _applyFilters();
+                  },
+                  child: const Text(
+                    'Appliquer les filtres',
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -457,15 +700,55 @@ class _MapScreenState extends State<MapScreen> {
           'Carte des prestataires',
           style: TextStyle(
             color: Colors.white,
+            fontWeight:
+                FontWeight.bold,
           ),
         ),
         actions: [
           IconButton(
-            onPressed: _initMap,
+            icon: Stack(
+              clipBehavior:
+                  Clip.none,
+              children: [
+                const Icon(
+                  Icons.tune,
+                  color:
+                      Colors.white,
+                ),
+                if (_selectedCategorie !=
+                    null)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration:
+                          const BoxDecoration(
+                        color:
+                            Colors.orange,
+                        shape:
+                            BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            onPressed:
+                _isLoading
+                    ? null
+                    : _showFiltersSheet,
+          ),
+
+          IconButton(
             icon: const Icon(
               Icons.refresh,
               color: Colors.white,
             ),
+            onPressed:
+                _isLoading
+                    ? null
+                    : _initMap,
           ),
         ],
       ),
@@ -519,11 +802,6 @@ class _MapScreenState extends State<MapScreen> {
                           textAlign:
                               TextAlign
                                   .center,
-                          style:
-                              const TextStyle(
-                            color:
-                                Colors.grey,
-                          ),
                         ),
 
                         const SizedBox(
@@ -542,14 +820,6 @@ class _MapScreenState extends State<MapScreen> {
                               const Text(
                             'Réessayer',
                           ),
-                          style:
-                              ElevatedButton.styleFrom(
-                            backgroundColor:
-                                primaryColor,
-                            foregroundColor:
-                                Colors
-                                    .white,
-                          ),
                         ),
                       ],
                     ),
@@ -563,15 +833,27 @@ class _MapScreenState extends State<MapScreen> {
                         initialCenter:
                             _userPosition ??
                                 _defaultPosition,
+
                         initialZoom:
-                            13,
+                            _radiusKm <= 5
+                                ? 14
+                                : _radiusKm <=
+                                        10
+                                    ? 13
+                                    : _radiusKm <=
+                                            20
+                                        ? 12
+                                        : 10,
+
                         minZoom: 5,
                         maxZoom: 18,
                       ),
+
                       children: [
                         TileLayer(
                           urlTemplate:
                               'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+
                           userAgentPackageName:
                               'com.mitan.app',
                         ),
@@ -660,7 +942,8 @@ class _MapScreenState extends State<MapScreen> {
                             ),
 
                             Text(
-                              '${_pros.length} prestataire${_pros.length > 1 ? 's' : ''}',
+                              '${_pros.length} prestataire${_pros.length > 1 ? 's' : ''}'
+                              ' (${_radiusKm.toInt()} km)',
                               style:
                                   const TextStyle(
                                 fontSize:

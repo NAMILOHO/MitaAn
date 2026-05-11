@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/user_model.dart';
-import 'cloudinary_service.dart';   // ← Import Cloudinary ajouté
+import 'cloudinary_service.dart';
 
 class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -20,12 +20,12 @@ class UserService {
       }
       return null;
     } catch (e) {
-      throw 'Erreur lors de la récupération du profil';
+      throw 'Erreur lors de la récupération du profil : $e';
     }
   }
 
   // ─────────────────────────────────────────
-  // CHOISIR UNE PHOTO (Optimisé)
+  // CHOISIR UNE PHOTO
   // ─────────────────────────────────────────
   Future<File?> pickImage(ImageSource source) async {
     try {
@@ -35,27 +35,43 @@ class UserService {
         maxHeight: 400,
         imageQuality: 60,
       );
+      // Retourne null si l'utilisateur annule — c'est normal, pas une erreur
       if (picked != null) return File(picked.path);
       return null;
     } catch (e) {
-      throw 'Erreur lors de la sélection de la photo';
+      throw 'Erreur lors de la sélection de la photo : $e';
     }
   }
 
   // ─────────────────────────────────────────
-  // TOUT EN UN : choisir + uploader sur Cloudinary + mettre à jour Firestore
+  // CHANGER LA PHOTO DE PROFIL
+  // Retourne l'URL si succès, null si l'utilisateur a annulé la sélection
+  // Lève une exception si l'upload échoue
   // ─────────────────────────────────────────
   Future<String?> changeProfilePhoto(String uid, ImageSource source) async {
+    // 1. Sélectionner le fichier
     final file = await pickImage(source);
+
+    // L'utilisateur a annulé la sélection → pas une erreur
     if (file == null) return null;
 
+    // 2. Uploader sur Cloudinary
     final cloudinary = CloudinaryService();
     final url = await cloudinary.uploadProfilePhoto(file);
 
-    if (url != null) {
+    // ✅ CORRECTION : si Cloudinary retourne null, lever une exception explicite
+    // au lieu de ne rien faire et laisser Firestore non mis à jour
+    if (url == null) {
+      throw 'L\'upload de la photo a échoué. Vérifiez votre connexion et réessayez.';
+    }
+
+    // 3. Mettre à jour Firestore avec la nouvelle URL
+    try {
       await _firestore.collection('users').doc(uid).update({
         'photoUrl': url,
       });
+    } catch (e) {
+      throw 'Photo uploadée mais erreur lors de la mise à jour du profil : $e';
     }
 
     return url;
@@ -68,7 +84,7 @@ class UserService {
     try {
       await _firestore.collection('users').doc(uid).update(data);
     } catch (e) {
-      throw 'Erreur lors de la mise à jour du profil';
+      throw 'Erreur lors de la mise à jour du profil : $e';
     }
   }
 }

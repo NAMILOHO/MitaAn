@@ -10,7 +10,7 @@ import '../../providers/auth_provider.dart' as app_auth;
 
 import 'edit_profile_screen.dart';
 import '../services/my_services_screen.dart';
-import '../auth/login_screen.dart';   // ← Import ajouté
+import '../auth/login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -43,7 +43,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     try {
-      // 🔹 Tentative 1 : Firestore
       final user = await _userService.getUserProfile(uid);
 
       if (user != null) {
@@ -56,9 +55,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return;
       }
 
-      // 🔹 Tentative 2 : création automatique si inexistant
+      // Création automatique si profil inexistant
       final firebaseUser = FirebaseAuth.instance.currentUser!;
-
       final newUser = UserModel(
         uid: uid,
         nom: firebaseUser.displayName ?? 'Utilisateur',
@@ -85,7 +83,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erreur chargement profil : $e'),
@@ -107,6 +104,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Barre de poignée
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
             const Text(
               'Changer la photo de profil',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -116,9 +123,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _photoOption(Icons.camera_alt, "Caméra", ImageSource.camera),
-                _photoOption(Icons.photo_library, "Galerie", ImageSource.gallery),
+                _photoOption(
+                    Icons.photo_library, "Galerie", ImageSource.gallery),
               ],
             ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -135,11 +144,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           CircleAvatar(
             radius: 30,
-            backgroundColor: primaryColor.withValues(alpha: 0.2),
-            child: Icon(icon, color: primaryColor),
+            backgroundColor: primaryColor.withValues(alpha: 0.15),
+            child: Icon(icon, color: primaryColor, size: 28),
           ),
           const SizedBox(height: 8),
-          Text(label),
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 13,
+            ),
+          ),
         ],
       ),
     );
@@ -149,35 +164,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
+    // ✅ CORRECTION : activer le loader AVANT la sélection
     setState(() => _isUploadingPhoto = true);
 
     try {
       final url = await _userService.changeProfilePhoto(uid, source);
 
-      if (url != null) {
-        await _loadProfile();
+      // ✅ CORRECTION : si l'utilisateur annule (url == null sans exception),
+      // on désactive simplement le loader sans afficher d'erreur
+      if (url == null) {
+        if (mounted) setState(() => _isUploadingPhoto = false);
+        return;
+      }
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Photo mise à jour ✅"),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
+      // Upload réussi : recharger le profil
+      await _loadProfile();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Photo de profil mise à jour ✅'),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
+      // ✅ CORRECTION : afficher l'erreur explicitement
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text('Erreur lors de l\'upload : $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
+    } finally {
+      // ✅ CORRECTION : toujours désactiver le loader à la fin
+      if (mounted) setState(() => _isUploadingPhoto = false);
     }
-
-    setState(() => _isUploadingPhoto = false);
   }
 
   @override
@@ -190,66 +214,106 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (_userModel == null) {
       return const Scaffold(
-        body: Center(child: Text("Profil introuvable")),
+        body: Center(child: Text('Profil introuvable')),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Mon Profil"),
+        title: const Text('Mon Profil'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.red),
+            tooltip: 'Se déconnecter',
             onPressed: () async {
               await context.read<app_auth.AuthProvider>().signOut();
               if (!mounted) return;
-
-              // Navigation manuelle vers LoginScreen
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
                 (route) => false,
               );
             },
-          )
+          ),
         ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
+            // ── Photo de profil ──
             Stack(
               alignment: Alignment.bottomRight,
               children: [
                 GestureDetector(
-                  onTap: _showPhotoOptions,
-                  child: CircleAvatar(
-                    radius: 55,
-                    backgroundImage: _userModel!.photoUrl.isNotEmpty
-                        ? NetworkImage(_userModel!.photoUrl)
-                        : null,
-                    child: _userModel!.photoUrl.isEmpty
-                        ? Text(
-                            _userModel!.nom.isNotEmpty
-                                ? _userModel!.nom[0].toUpperCase()
-                                : "?",
-                            style: const TextStyle(
-                              fontSize: 30,
-                              color: primaryColor,
+                  onTap: _isUploadingPhoto ? null : _showPhotoOptions,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // ✅ CORRECTION : backgroundColor défini sur l'avatar
+                      CircleAvatar(
+                        radius: 55,
+                        backgroundColor:
+                            primaryColor.withValues(alpha: 0.15),
+                        backgroundImage: _userModel!.photoUrl.isNotEmpty
+                            ? NetworkImage(_userModel!.photoUrl)
+                            : null,
+                        child: _userModel!.photoUrl.isEmpty
+                            ? Text(
+                                _userModel!.nom.isNotEmpty
+                                    ? _userModel!.nom[0].toUpperCase()
+                                    : '?',
+                                style: const TextStyle(
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.bold,
+                                  color: primaryColor,
+                                ),
+                              )
+                            : null,
+                      ),
+                      // Overlay de chargement sur la photo
+                      if (_isUploadingPhoto)
+                        Container(
+                          width: 110,
+                          height: 110,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 3,
                             ),
-                          )
-                        : null,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                if (_isUploadingPhoto)
-                  const Positioned(
-                    child: CircularProgressIndicator(),
-                  )
+                // Bouton crayon en bas à droite
+                if (!_isUploadingPhoto)
+                  GestureDetector(
+                    onTap: _showPhotoOptions,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: primaryColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ),
+                  ),
               ],
             ),
 
             const SizedBox(height: 20),
 
+            // Nom
             Text(
               _userModel!.nom,
               style: const TextStyle(
@@ -258,13 +322,72 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
 
-            Text(_userModel!.email),
+            // Email
+            Text(
+              _userModel!.email,
+              style: const TextStyle(color: Colors.grey),
+            ),
+
+            // Ville (si renseignée)
+            if (_userModel!.ville.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.location_on,
+                    size: 14,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _userModel!.ville,
+                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                ],
+              ),
+            ],
+
+            // Badge professionnel
+            if (_userModel!.isPro) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  _userModel!.categorie,
+                  style: const TextStyle(
+                    color: primaryColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+
+            // Bio
+            if (_userModel!.bio.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                _userModel!.bio,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.black87,
+                  fontSize: 14,
+                  height: 1.5,
+                ),
+              ),
+            ],
 
             const SizedBox(height: 30),
 
-            // ── Bouton Mes Annonces ──
+            // ── Bouton Mes annonces ──
             SizedBox(
               width: double.infinity,
               height: 52,
@@ -294,22 +417,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 12),
 
-            // Bouton Modifier le profil
-            ElevatedButton.icon(
-              onPressed: () async {
-                final updated = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => EditProfileScreen(user: _userModel!),
+            // ── Bouton Modifier le profil ──
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final updated = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          EditProfileScreen(user: _userModel!),
+                    ),
+                  );
+                  // ✅ recharger si modifications enregistrées
+                  if (updated == true && mounted) {
+                    await _loadProfile();
+                  }
+                },
+                icon: const Icon(Icons.edit),
+                label: const Text(
+                  'Modifier le profil',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
-                );
-
-                if (updated == true) {
-                  _loadProfile();
-                }
-              },
-              icon: const Icon(Icons.edit),
-              label: const Text("Modifier le profil"),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
             ),
           ],
         ),

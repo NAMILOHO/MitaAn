@@ -20,7 +20,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _nomController;
   late TextEditingController _phoneController;
   late TextEditingController _bioController;
-  late TextEditingController _villeController;
+  late TextEditingController _villeController; // ✅ sera pré-rempli
   String? _selectedCategory;
 
   static const Color primaryColor = Color(0xFF1D9E75);
@@ -39,11 +39,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    // Pré-remplir les champs avec les données actuelles
-    _nomController = TextEditingController(text: widget.user.nom);
+    _nomController   = TextEditingController(text: widget.user.nom);
     _phoneController = TextEditingController(text: widget.user.phone);
-    _bioController = TextEditingController(text: widget.user.bio);
-    _villeController = TextEditingController(text: '');
+    _bioController   = TextEditingController(text: widget.user.bio);
+    // ✅ CORRECTION 1 : pré-remplir avec la ville existante
+    _villeController = TextEditingController(text: widget.user.ville);
+    // ✅ CORRECTION 2 : initialiser la catégorie correctement
     _selectedCategory = widget.user.categorie.isNotEmpty
         ? widget.user.categorie
         : null;
@@ -65,13 +66,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     try {
       final uid = FirebaseAuth.instance.currentUser!.uid;
 
-      final data = {
-        'nom': _nomController.text.trim(),
+      // ✅ CORRECTION 3 : inclure la ville dans les données sauvegardées
+      final Map<String, dynamic> data = {
+        'nom':   _nomController.text.trim(),
         'phone': _phoneController.text.trim(),
-        'bio': _bioController.text.trim(),
+        'bio':   _bioController.text.trim(),
+        'ville': _villeController.text.trim(), // ← était absent avant
       };
 
-      // Ajouter la catégorie si professionnel
+      // Ajouter la catégorie si professionnel et catégorie sélectionnée
       if (widget.user.isPro && _selectedCategory != null) {
         data['categorie'] = _selectedCategory!;
       }
@@ -85,7 +88,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        // Retourne true pour signaler que le profil a été modifié
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -98,7 +100,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
       }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -133,7 +135,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 label: 'Nom complet',
                 icon: Icons.person_outline,
                 validator: (v) =>
-                    v == null || v.isEmpty ? 'Champ requis' : null,
+                    v == null || v.trim().isEmpty ? 'Champ requis' : null,
               ),
               const SizedBox(height: 16),
 
@@ -143,9 +145,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 label: 'Téléphone',
                 icon: Icons.phone_outlined,
                 keyboardType: TextInputType.phone,
-                validator: (v) => v != null && v.length < 8
-                    ? 'Minimum 8 chiffres'
-                    : null,
+                validator: (v) =>
+                    v != null && v.trim().length < 8
+                        ? 'Minimum 8 chiffres'
+                        : null,
+              ),
+              const SizedBox(height: 16),
+
+              // ✅ CORRECTION 4 : Champ Ville fonctionnel et pré-rempli
+              _buildField(
+                controller: _villeController,
+                label: 'Ville',
+                icon: Icons.location_city_outlined,
               ),
               const SizedBox(height: 16),
 
@@ -156,8 +167,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 maxLength: 200,
                 decoration: InputDecoration(
                   labelText: 'Bio (description)',
-                  prefixIcon: const Icon(Icons.info_outline,
-                      color: primaryColor),
+                  prefixIcon: const Icon(
+                    Icons.info_outline,
+                    color: primaryColor,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -168,24 +181,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-
-              // Champ Ville
-              _buildField(
-                controller: _villeController,
-                label: 'Ville',
-                icon: Icons.location_city_outlined,
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 4),
 
               // Dropdown catégorie (si professionnel)
               if (widget.user.isPro) ...[
+                // ✅ CORRECTION 5 : 'value' au lieu de 'initialValue'
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedCategory,
+                  value: _selectedCategory, // ← était 'initialValue' (invalide)
                   decoration: InputDecoration(
                     labelText: 'Catégorie professionnelle',
-                    prefixIcon: const Icon(Icons.work_outline,
-                        color: primaryColor),
+                    prefixIcon: const Icon(
+                      Icons.work_outline,
+                      color: primaryColor,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -196,8 +204,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                   ),
                   items: _categories.map((cat) {
-                    return DropdownMenuItem(
-                        value: cat, child: Text(cat));
+                    return DropdownMenuItem(value: cat, child: Text(cat));
                   }).toList(),
                   onChanged: (v) => setState(() => _selectedCategory = v),
                 ),
@@ -220,13 +227,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                   ),
                   child: _isLoading
-                      ? const CircularProgressIndicator(
-                          color: Colors.white)
+                      ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
                           'Enregistrer',
                           style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                 ),
               ),
