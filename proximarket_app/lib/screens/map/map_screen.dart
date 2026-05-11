@@ -18,14 +18,17 @@ class _MapScreenState extends State<MapScreen> {
   static const Color primaryColor = Color(0xFF1D9E75);
 
   final LocationService _locationService = LocationService();
-  final MapController _mapController = MapController();
 
   LatLng? _userPosition;
   List<UserModel> _pros = [];
+
   bool _isLoading = true;
   String? _errorMessage;
 
-  final LatLng _defaultPosition = LatLng(5.3600, -4.0083);
+  final LatLng _defaultPosition = const LatLng(
+    5.3600,
+    -4.0083,
+  );
 
   @override
   void initState() {
@@ -43,7 +46,8 @@ class _MapScreenState extends State<MapScreen> {
     });
 
     try {
-      final position = await _locationService.getCurrentPosition();
+      final position =
+          await _locationService.getCurrentPosition();
 
       _userPosition = LatLng(
         position.latitude,
@@ -51,10 +55,6 @@ class _MapScreenState extends State<MapScreen> {
       );
 
       await _loadPros();
-
-      if (mounted && _userPosition != null) {
-        _mapController.move(_userPosition!, 13);
-      }
     } catch (e) {
       setState(() {
         _errorMessage = e.toString();
@@ -78,8 +78,17 @@ class _MapScreenState extends State<MapScreen> {
         .get();
 
     final pros = snap.docs
-        .map((doc) => UserModel.fromMap(doc.data(), doc.id))
-        .where((u) => u.gpsLat != 0.0 && u.gpsLng != 0.0)
+        .map(
+          (doc) => UserModel.fromMap(
+            doc.data(),
+            doc.id,
+          ),
+        )
+        .where(
+          (u) =>
+              u.gpsLat != 0.0 &&
+              u.gpsLng != 0.0,
+        )
         .toList();
 
     if (mounted) {
@@ -95,7 +104,7 @@ class _MapScreenState extends State<MapScreen> {
   List<Marker> _buildMarkers() {
     final markers = <Marker>[];
 
-    // Position utilisateur
+    // POSITION UTILISATEUR
     if (_userPosition != null) {
       markers.add(
         Marker(
@@ -114,52 +123,80 @@ class _MapScreenState extends State<MapScreen> {
       );
     }
 
-    // Prestataires
+    // PRESTATAIRES
     for (final pro in _pros) {
       final isSelf =
-          pro.uid == FirebaseAuth.instance.currentUser?.uid;
+          pro.uid ==
+              FirebaseAuth
+                  .instance
+                  .currentUser
+                  ?.uid;
 
       if (isSelf) continue;
 
       markers.add(
         Marker(
-          point: LatLng(pro.gpsLat, pro.gpsLng),
+          point: LatLng(
+            pro.gpsLat,
+            pro.gpsLng,
+          ),
           width: 160,
           height: 60,
           child: GestureDetector(
-            onTap: () => _showProBottomSheet(pro),
+            onTap: () =>
+                _showProBottomSheet(pro),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize:
+                  MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
+                  padding:
+                      const EdgeInsets.symmetric(
                     horizontal: 8,
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
                     color: primaryColor,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius:
+                        BorderRadius.circular(
+                      8,
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
+                        color: Colors.black
+                            .withOpacity(
+                          0.2,
+                        ),
                         blurRadius: 4,
-                        offset: const Offset(0, 2),
+                        offset:
+                            const Offset(
+                          0,
+                          2,
+                        ),
                       ),
                     ],
                   ),
                   child: Text(
-                    pro.nom.split(' ').first,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    pro.nom
+                        .split(' ')
+                        .first,
+                    style:
+                        const TextStyle(
+                      color:
+                          Colors.white,
                       fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                      fontWeight:
+                          FontWeight.bold,
                     ),
-                    overflow: TextOverflow.ellipsis,
+                    overflow:
+                        TextOverflow
+                            .ellipsis,
                   ),
                 ),
                 const Icon(
                   Icons.location_on,
-                  color: primaryColor,
+                  color:
+                      primaryColor,
                   size: 24,
                 ),
               ],
@@ -175,11 +212,14 @@ class _MapScreenState extends State<MapScreen> {
   // ─────────────────────────────────────────
   // BOTTOM SHEET
   // ─────────────────────────────────────────
-  void _showProBottomSheet(UserModel pro) {
+  void _showProBottomSheet(
+    UserModel pro,
+  ) {
     double? distance;
 
     if (_userPosition != null) {
-      distance = _locationService.calculateDistance(
+      distance =
+          _locationService.calculateDistance(
         _userPosition!.latitude,
         _userPosition!.longitude,
         pro.gpsLat,
@@ -189,88 +229,139 @@ class _MapScreenState extends State<MapScreen> {
 
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
+      shape:
+          const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(
           top: Radius.circular(20),
         ),
       ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(20),
+      builder:
+          (_) => Padding(
+        padding:
+            const EdgeInsets.all(20),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize:
+              MainAxisSize.min,
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
           children: [
             Center(
               child: Container(
                 width: 40,
                 height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+                decoration:
+                    BoxDecoration(
+                  color:
+                      Colors.grey[300],
+                  borderRadius:
+                      BorderRadius.circular(
+                    2,
+                  ),
                 ),
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(
+              height: 16,
+            ),
 
             Row(
               children: [
                 CircleAvatar(
                   radius: 28,
                   backgroundColor:
-                      primaryColor.withOpacity(0.15),
-                  backgroundImage: pro.photoUrl.isNotEmpty
-                      ? NetworkImage(pro.photoUrl)
-                      : null,
-                  child: pro.photoUrl.isEmpty
-                      ? Text(
-                          pro.nom.isNotEmpty
-                              ? pro.nom[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                            color: primaryColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                          ),
-                        )
-                      : null,
+                      primaryColor
+                          .withOpacity(
+                    0.15,
+                  ),
+                  backgroundImage:
+                      pro.photoUrl
+                              .isNotEmpty
+                          ? NetworkImage(
+                              pro.photoUrl,
+                            )
+                          : null,
+                  child:
+                      pro.photoUrl
+                              .isEmpty
+                          ? Text(
+                              pro.nom
+                                      .isNotEmpty
+                                  ? pro
+                                      .nom[0]
+                                      .toUpperCase()
+                                  : '?',
+                              style:
+                                  const TextStyle(
+                                color:
+                                    primaryColor,
+                                fontWeight:
+                                    FontWeight.bold,
+                                fontSize:
+                                    20,
+                              ),
+                            )
+                          : null,
                 ),
 
-                const SizedBox(width: 12),
+                const SizedBox(
+                  width: 12,
+                ),
 
                 Expanded(
                   child: Column(
                     crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                        CrossAxisAlignment
+                            .start,
                     children: [
                       Text(
                         pro.nom,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                        style:
+                            const TextStyle(
+                          fontWeight:
+                              FontWeight
+                                  .bold,
+                          fontSize:
+                              16,
                         ),
                       ),
 
-                      if (pro.categorie.isNotEmpty)
+                      if (pro
+                          .categorie
+                          .isNotEmpty)
                         Container(
                           margin:
-                              const EdgeInsets.only(top: 4),
+                              const EdgeInsets.only(
+                            top: 4,
+                          ),
                           padding:
                               const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
+                            horizontal:
+                                8,
+                            vertical:
+                                2,
                           ),
-                          decoration: BoxDecoration(
+                          decoration:
+                              BoxDecoration(
                             color:
-                                primaryColor.withOpacity(0.1),
+                                primaryColor
+                                    .withOpacity(
+                              0.1,
+                            ),
                             borderRadius:
-                                BorderRadius.circular(6),
+                                BorderRadius.circular(
+                              6,
+                            ),
                           ),
                           child: Text(
                             pro.categorie,
-                            style: const TextStyle(
-                              color: primaryColor,
-                              fontSize: 12,
+                            style:
+                                const TextStyle(
+                              color:
+                                  primaryColor,
+                              fontSize:
+                                  12,
                             ),
                           ),
                         ),
@@ -281,50 +372,68 @@ class _MapScreenState extends State<MapScreen> {
                 if (distance != null)
                   Text(
                     '${distance.toStringAsFixed(1)} km',
-                    style: const TextStyle(
-                      color: Colors.grey,
+                    style:
+                        const TextStyle(
+                      color:
+                          Colors.grey,
                       fontSize: 13,
                     ),
                   ),
               ],
             ),
 
-            if (pro.bio.isNotEmpty) ...[
-              const SizedBox(height: 12),
-
-              Text(
-                pro.bio,
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 13,
+            if (pro.bio.isNotEmpty)
+              ...[
+                const SizedBox(
+                  height: 12,
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
 
-            const SizedBox(height: 12),
+                Text(
+                  pro.bio,
+                  style:
+                      const TextStyle(
+                    color:
+                        Colors.grey,
+                    fontSize: 13,
+                  ),
+                  maxLines: 2,
+                  overflow:
+                      TextOverflow
+                          .ellipsis,
+                ),
+              ],
+
+            const SizedBox(
+              height: 12,
+            ),
 
             if (pro.ville.isNotEmpty)
               Row(
                 children: [
                   const Icon(
                     Icons.location_on,
-                    color: Colors.grey,
+                    color:
+                        Colors.grey,
                     size: 16,
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(
+                    width: 4,
+                  ),
                   Text(
                     pro.ville,
-                    style: const TextStyle(
-                      color: Colors.grey,
+                    style:
+                        const TextStyle(
+                      color:
+                          Colors.grey,
                       fontSize: 13,
                     ),
                   ),
                 ],
               ),
 
-            const SizedBox(height: 16),
+            const SizedBox(
+              height: 16,
+            ),
           ],
         ),
       ),
@@ -335,14 +444,20 @@ class _MapScreenState extends State<MapScreen> {
   // UI
   // ─────────────────────────────────────────
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: primaryColor,
-        automaticallyImplyLeading: false,
+        backgroundColor:
+            primaryColor,
+        automaticallyImplyLeading:
+            false,
         title: const Text(
           'Carte des prestataires',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(
+            color: Colors.white,
+          ),
         ),
         actions: [
           IconButton(
@@ -359,54 +474,81 @@ class _MapScreenState extends State<MapScreen> {
           ? const Center(
               child: Column(
                 mainAxisAlignment:
-                    MainAxisAlignment.center,
+                    MainAxisAlignment
+                        .center,
                 children: [
                   CircularProgressIndicator(
-                    color: primaryColor,
+                    color:
+                        primaryColor,
                   ),
-                  SizedBox(height: 16),
-                  Text('Chargement de la carte...'),
+                  SizedBox(
+                    height: 16,
+                  ),
+                  Text(
+                    'Chargement de la carte...',
+                  ),
                 ],
               ),
             )
           : _errorMessage != null
               ? Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(24),
+                    padding:
+                        const EdgeInsets.all(
+                      24,
+                    ),
                     child: Column(
                       mainAxisAlignment:
-                          MainAxisAlignment.center,
+                          MainAxisAlignment
+                              .center,
                       children: [
                         const Icon(
-                          Icons.location_off,
+                          Icons
+                              .location_off,
                           size: 64,
-                          color: Colors.grey,
+                          color:
+                              Colors.grey,
                         ),
 
-                        const SizedBox(height: 16),
+                        const SizedBox(
+                          height: 16,
+                        ),
 
                         Text(
                           _errorMessage!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.grey,
+                          textAlign:
+                              TextAlign
+                                  .center,
+                          style:
+                              const TextStyle(
+                            color:
+                                Colors.grey,
                           ),
                         ),
 
-                        const SizedBox(height: 20),
+                        const SizedBox(
+                          height: 20,
+                        ),
 
                         ElevatedButton.icon(
-                          onPressed: _initMap,
+                          onPressed:
+                              _initMap,
                           icon:
-                              const Icon(Icons.refresh),
+                              const Icon(
+                            Icons
+                                .refresh,
+                          ),
                           label:
-                              const Text('Réessayer'),
+                              const Text(
+                            'Réessayer',
+                          ),
                           style:
                               ElevatedButton.styleFrom(
                             backgroundColor:
                                 primaryColor,
                             foregroundColor:
-                                Colors.white,
+                                Colors
+                                    .white,
                           ),
                         ),
                       ],
@@ -416,12 +558,13 @@ class _MapScreenState extends State<MapScreen> {
               : Stack(
                   children: [
                     FlutterMap(
-                      mapController: _mapController,
-                      options: MapOptions(
+                      options:
+                          MapOptions(
                         initialCenter:
                             _userPosition ??
                                 _defaultPosition,
-                        initialZoom: 13,
+                        initialZoom:
+                            13,
                         minZoom: 5,
                         maxZoom: 18,
                       ),
@@ -434,7 +577,8 @@ class _MapScreenState extends State<MapScreen> {
                         ),
 
                         MarkerLayer(
-                          markers: _buildMarkers(),
+                          markers:
+                              _buildMarkers(),
                         ),
                       ],
                     ),
@@ -442,56 +586,85 @@ class _MapScreenState extends State<MapScreen> {
                     Positioned(
                       bottom: 16,
                       left: 16,
-                      child: Container(
+                      child:
+                          Container(
                         padding:
                             const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
+                          horizontal:
+                              12,
+                          vertical:
+                              8,
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
+                        decoration:
+                            BoxDecoration(
+                          color:
+                              Colors
+                                  .white,
                           borderRadius:
-                              BorderRadius.circular(10),
+                              BorderRadius.circular(
+                            10,
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black
-                                  .withOpacity(0.1),
-                              blurRadius: 6,
+                              color: Colors
+                                  .black
+                                  .withOpacity(
+                                0.1,
+                              ),
+                              blurRadius:
+                                  6,
                             ),
                           ],
                         ),
                         child: Row(
                           mainAxisSize:
-                              MainAxisSize.min,
+                              MainAxisSize
+                                  .min,
                           children: [
                             const Icon(
-                              Icons.my_location,
-                              color: Colors.blue,
+                              Icons
+                                  .my_location,
+                              color:
+                                  Colors
+                                      .blue,
                               size: 16,
                             ),
 
-                            const SizedBox(width: 6),
+                            const SizedBox(
+                              width: 6,
+                            ),
 
                             const Text(
                               'Moi',
                               style:
-                                  TextStyle(fontSize: 12),
+                                  TextStyle(
+                                fontSize:
+                                    12,
+                              ),
                             ),
 
-                            const SizedBox(width: 12),
+                            const SizedBox(
+                              width: 12,
+                            ),
 
                             const Icon(
-                              Icons.location_on,
-                              color: primaryColor,
+                              Icons
+                                  .location_on,
+                              color:
+                                  primaryColor,
                               size: 16,
                             ),
 
-                            const SizedBox(width: 6),
+                            const SizedBox(
+                              width: 6,
+                            ),
 
                             Text(
                               '${_pros.length} prestataire${_pros.length > 1 ? 's' : ''}',
-                              style: const TextStyle(
-                                fontSize: 12,
+                              style:
+                                  const TextStyle(
+                                fontSize:
+                                    12,
                               ),
                             ),
                           ],
