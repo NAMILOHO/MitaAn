@@ -10,7 +10,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <application
-        android:label="ProxiMarket"
+        android:label="MitaAn"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 
@@ -34,7 +34,7 @@
         
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="proximarket_channel"/>
+            android:value="MitaAn_channel"/>
 
         <activity
             android:name=".MainActivity"

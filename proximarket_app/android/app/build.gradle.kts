@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.proximarket_app"
+    namespace = "com.example.MitaAn_app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 

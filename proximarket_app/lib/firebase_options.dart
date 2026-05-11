@@ -66,7 +66,7 @@ class DefaultFirebaseOptions {
     storageBucket: 'mitaan-fea0b.firebasestorage.app',
     androidClientId: '112476175005-0oi14667ofnp1jq545ijhm3lbdbgbbj2.apps.googleusercontent.com',
     iosClientId: '112476175005-g4vs5t2sqg741rkfl7fembsaicljcudl.apps.googleusercontent.com',
-    iosBundleId: 'com.example.proximarketApp',
+    iosBundleId: 'com.example.MitaAnApp',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -77,7 +77,7 @@ class DefaultFirebaseOptions {
     storageBucket: 'mitaan-fea0b.firebasestorage.app',
     androidClientId: '112476175005-0oi14667ofnp1jq545ijhm3lbdbgbbj2.apps.googleusercontent.com',
     iosClientId: '112476175005-g4vs5t2sqg741rkfl7fembsaicljcudl.apps.googleusercontent.com',
-    iosBundleId: 'com.example.proximarketApp',
+    iosBundleId: 'com.example.MitaAnApp',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

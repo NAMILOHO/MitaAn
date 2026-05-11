@@ -33,7 +33,7 @@ class LocationService {
     final granted = await requestPermission();
     if (!granted) {
       throw 'Permission GPS refusée.\n'
-          'Activez-la dans Paramètres → Applications → ProxiMarket → Autorisations';
+          'Activez-la dans Paramètres → Applications → MitaAn → Autorisations';
     }
 
     // Vérifier si le service de localisation est activé (sauf sur Web)

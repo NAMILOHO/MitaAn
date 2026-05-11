@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Proximarket App</string>
+	<string>MitaAn App</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>proximarket_app</string>
+	<string>MitaAn_app</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -67,8 +67,8 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>ProxiMarket a besoin d'accéder à vos photos pour votre photo de profil</string>
+	<string>MitaAn a besoin d'accéder à vos photos pour votre photo de profil</string>
 	<key>NSCameraUsageDescription</key>
-	<string>ProxiMarket a besoin de votre caméra pour prendre une photo de profil</string>
+	<string>MitaAn a besoin de votre caméra pour prendre une photo de profil</string>
 </dict>
 </plist>

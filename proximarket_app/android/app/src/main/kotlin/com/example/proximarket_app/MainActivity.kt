@@ -1,4 +1,4 @@
-package com.example.proximarket_app
+package com.example.MitaAn_app
 
 import io.flutter.embedding.android.FlutterActivity
 
