@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart'; // Pour debugPrint
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/service_model.dart';
@@ -11,7 +11,7 @@ class ServiceFirestore {
   final ImagePicker _picker = ImagePicker();
 
   // ─────────────────────────────────────────
-  // CHOISIR PLUSIEURS PHOTOS (Optimisé)
+  // CHOISIR PLUSIEURS PHOTOS
   // ─────────────────────────────────────────
   Future<List<File>> pickImages() async {
     try {
@@ -27,26 +27,32 @@ class ServiceFirestore {
   }
 
   // ─────────────────────────────────────────
-  // UPLOADER LES PHOTOS SUR CLOUDINARY (Avec logs)
+  // ✅ UPLOAD EN PARALLÈLE avec Future.wait()
+  // Toutes les photos sont uploadées simultanément
   // ─────────────────────────────────────────
   Future<List<String>> uploadServicePhotos(
     String userId,
     List<File> images,
   ) async {
-    debugPrint('📸 Upload de ${images.length} images vers Cloudinary...');
+    debugPrint('📸 Upload de ${images.length} images en parallèle...');
 
     final cloudinary = CloudinaryService();
-    final urls = await cloudinary.uploadImages(
-      images,
-      folder: 'mitan/services/$userId',
+    final folder = 'mitan/services/$userId';
+
+    // ✅ Future.wait() lance tous les uploads simultanément
+    final List<String?> results = await Future.wait(
+      images.map((file) => cloudinary.uploadImage(file, folder: folder)),
     );
 
-    debugPrint('✅ ${urls.length} URLs obtenues avec succès');
+    // Filtrer les nulls (uploads échoués)
+    final urls = results.whereType<String>().toList();
+
+    debugPrint('✅ ${urls.length}/${images.length} images uploadées');
     return urls;
   }
 
   // ─────────────────────────────────────────
-  // CRÉER UNE ANNONCE DANS FIRESTORE
+  // CRÉER UNE ANNONCE
   // ─────────────────────────────────────────
   Future<ServiceModel> createService({
     required String userId,
@@ -54,6 +60,7 @@ class ServiceFirestore {
     required String description,
     required String categorie,
     required double prix,
+    required String unite,      // ✅ AJOUT
     required List<String> photos,
     required double gpsLat,
     required double gpsLng,
@@ -67,6 +74,7 @@ class ServiceFirestore {
       description: description,
       categorie: categorie,
       prix: prix,
+      unite: unite,             // ✅ AJOUT
       photos: photos,
       gpsLat: gpsLat,
       gpsLng: gpsLng,
@@ -84,7 +92,40 @@ class ServiceFirestore {
   }
 
   // ─────────────────────────────────────────
-  // RÉCUPÉRER TOUTES LES ANNONCES ACTIVES (Optimisé)
+  // METTRE À JOUR UNE ANNONCE EXISTANTE
+  // ─────────────────────────────────────────
+  Future<void> updateService(
+    String serviceId,
+    Map<String, dynamic> data,
+  ) async {
+    await _firestore.collection('services').doc(serviceId).update({
+      ...data,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // ─────────────────────────────────────────
+  // ✅ TOGGLE ACTIF / INACTIF (sans supprimer)
+  // ─────────────────────────────────────────
+  Future<void> toggleServiceActive(String serviceId, bool isActive) async {
+    await _firestore.collection('services').doc(serviceId).update({
+      'isActive': isActive,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // ─────────────────────────────────────────
+  // SUPPRIMER UNE ANNONCE (désactivation douce)
+  // ─────────────────────────────────────────
+  Future<void> deleteService(String serviceId) async {
+    await _firestore.collection('services').doc(serviceId).update({
+      'isActive': false,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // ─────────────────────────────────────────
+  // RÉCUPÉRER TOUTES LES ANNONCES ACTIVES
   // ─────────────────────────────────────────
   Future<List<ServiceModel>> getAllServices({int limit = 20}) async {
     try {
@@ -104,7 +145,7 @@ class ServiceFirestore {
   }
 
   // ─────────────────────────────────────────
-  // RÉCUPÉRER LES ANNONCES PAR CATÉGORIE
+  // RÉCUPÉRER PAR CATÉGORIE
   // ─────────────────────────────────────────
   Future<List<ServiceModel>> getServicesByCategory(String categorie) async {
     try {
@@ -126,6 +167,7 @@ class ServiceFirestore {
 
   // ─────────────────────────────────────────
   // RÉCUPÉRER LES ANNONCES D'UN UTILISATEUR
+  // (actives ET inactives pour "Mes annonces")
   // ─────────────────────────────────────────
   Future<List<ServiceModel>> getUserServices(String userId) async {
     try {
@@ -142,14 +184,5 @@ class ServiceFirestore {
     } catch (e) {
       throw 'Erreur chargement mes annonces : $e';
     }
-  }
-
-  // ─────────────────────────────────────────
-  // SUPPRIMER UNE ANNONCE (désactivation)
-  // ─────────────────────────────────────────
-  Future<void> deleteService(String serviceId) async {
-    await _firestore.collection('services').doc(serviceId).update({
-      'isActive': false,
-    });
   }
 }
