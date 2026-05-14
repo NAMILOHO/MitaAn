@@ -27,26 +27,21 @@ class ServiceFirestore {
   }
 
   // ─────────────────────────────────────────
-  // ✅ UPLOAD EN PARALLÈLE avec Future.wait()
-  // Toutes les photos sont uploadées simultanément
+  // UPLOAD EN PARALLÈLE des photos
   // ─────────────────────────────────────────
   Future<List<String>> uploadServicePhotos(
     String userId,
     List<File> images,
   ) async {
     debugPrint('📸 Upload de ${images.length} images en parallèle...');
-
     final cloudinary = CloudinaryService();
     final folder = 'mitan/services/$userId';
 
-    // ✅ Future.wait() lance tous les uploads simultanément
     final List<String?> results = await Future.wait(
       images.map((file) => cloudinary.uploadImage(file, folder: folder)),
     );
 
-    // Filtrer les nulls (uploads échoués)
     final urls = results.whereType<String>().toList();
-
     debugPrint('✅ ${urls.length}/${images.length} images uploadées');
     return urls;
   }
@@ -60,7 +55,7 @@ class ServiceFirestore {
     required String description,
     required String categorie,
     required double prix,
-    required String unite,      // ✅ AJOUT
+    required String unite,
     required List<String> photos,
     required double gpsLat,
     required double gpsLng,
@@ -74,7 +69,7 @@ class ServiceFirestore {
       description: description,
       categorie: categorie,
       prix: prix,
-      unite: unite,             // ✅ AJOUT
+      unite: unite,
       photos: photos,
       gpsLat: gpsLat,
       gpsLng: gpsLng,
@@ -87,12 +82,11 @@ class ServiceFirestore {
       ...service.toMap(),
       'createdAt': FieldValue.serverTimestamp(),
     });
-
     return service;
   }
 
   // ─────────────────────────────────────────
-  // METTRE À JOUR UNE ANNONCE EXISTANTE
+  // METTRE À JOUR UNE ANNONCE
   // ─────────────────────────────────────────
   Future<void> updateService(
     String serviceId,
@@ -105,7 +99,7 @@ class ServiceFirestore {
   }
 
   // ─────────────────────────────────────────
-  // ✅ TOGGLE ACTIF / INACTIF (sans supprimer)
+  // TOGGLE ACTIF / INACTIF
   // ─────────────────────────────────────────
   Future<void> toggleServiceActive(String serviceId, bool isActive) async {
     await _firestore.collection('services').doc(serviceId).update({
@@ -115,7 +109,7 @@ class ServiceFirestore {
   }
 
   // ─────────────────────────────────────────
-  // SUPPRIMER UNE ANNONCE (désactivation douce)
+  // SUPPRIMER (désactivation)
   // ─────────────────────────────────────────
   Future<void> deleteService(String serviceId) async {
     await _firestore.collection('services').doc(serviceId).update({
@@ -135,7 +129,6 @@ class ServiceFirestore {
           .orderBy('createdAt', descending: true)
           .limit(limit)
           .get();
-
       return snapshot.docs
           .map((doc) => ServiceModel.fromMap(doc.data(), doc.id))
           .toList();
@@ -156,7 +149,6 @@ class ServiceFirestore {
           .orderBy('createdAt', descending: true)
           .limit(30)
           .get();
-
       return snapshot.docs
           .map((doc) => ServiceModel.fromMap(doc.data(), doc.id))
           .toList();
@@ -167,7 +159,6 @@ class ServiceFirestore {
 
   // ─────────────────────────────────────────
   // RÉCUPÉRER LES ANNONCES D'UN UTILISATEUR
-  // (actives ET inactives pour "Mes annonces")
   // ─────────────────────────────────────────
   Future<List<ServiceModel>> getUserServices(String userId) async {
     try {
@@ -177,12 +168,24 @@ class ServiceFirestore {
           .orderBy('createdAt', descending: true)
           .limit(50)
           .get();
-
       return snapshot.docs
           .map((doc) => ServiceModel.fromMap(doc.data(), doc.id))
           .toList();
     } catch (e) {
       throw 'Erreur chargement mes annonces : $e';
+    }
+  }
+
+  // =============================================
+  // NOUVELLE MÉTHODE AJOUTÉE
+  // =============================================
+  Future<ServiceModel?> getServiceById(String serviceId) async {
+    try {
+      final doc = await _firestore.collection('services').doc(serviceId).get();
+      if (!doc.exists) return null;
+      return ServiceModel.fromMap(doc.data()!, doc.id);
+    } catch (_) {
+      return null;
     }
   }
 }

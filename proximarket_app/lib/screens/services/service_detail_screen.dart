@@ -45,7 +45,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     });
   }
 
-  // ====================== CORRECTION 1 : Appeler & WhatsApp ======================
+  // ====================== Appeler & WhatsApp ======================
   Future<void> _callOwner() async {
     if (_owner == null || _owner!.phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -110,7 +110,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       }
     }
   }
-  // ============================================================================
 
   bool get _isMyService {
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -123,7 +122,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       backgroundColor: const Color(0xFFF5F5F5),
       body: CustomScrollView(
         slivers: [
-          // ── AppBar avec photos ──
+          // AppBar avec photos
           SliverAppBar(
             expandedHeight: 280,
             pinned: true,
@@ -135,13 +134,11 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       children: [
                         PageView.builder(
                           itemCount: widget.service.photos.length,
-                          onPageChanged: (i) =>
-                              setState(() => _photoIndex = i),
+                          onPageChanged: (i) => setState(() => _photoIndex = i),
                           itemBuilder: (_, i) => Image.network(
                             widget.service.photos[i],
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                _placeholder(),
+                            errorBuilder: (context, error, stackTrace) => _placeholder(),
                           ),
                         ),
                         if (widget.service.photos.length > 1)
@@ -156,12 +153,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                                 (i) => Container(
                                   width: i == _photoIndex ? 20 : 8,
                                   height: 8,
-                                  margin: const EdgeInsets.symmetric(
-                                      horizontal: 3),
+                                  margin: const EdgeInsets.symmetric(horizontal: 3),
                                   decoration: BoxDecoration(
-                                    color: i == _photoIndex
-                                        ? Colors.white
-                                        : Colors.white54,
+                                    color: i == _photoIndex ? Colors.white : Colors.white54,
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                 ),
@@ -173,7 +167,8 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   : _placeholder(),
             ),
           ),
-          // ── Contenu ──
+
+          // Contenu principal
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -187,16 +182,12 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       Expanded(
                         child: Text(
                           widget.service.titre,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: primaryColor.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
@@ -218,8 +209,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
                           color: primaryColor,
                           borderRadius: BorderRadius.circular(10),
@@ -237,49 +227,30 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       ),
                       const SizedBox(width: 12),
                       if (widget.distanceKm != null) ...[
-                        const Icon(Icons.location_on,
-                            color: Colors.grey, size: 16),
+                        const Icon(Icons.location_on, color: Colors.grey, size: 16),
                         const SizedBox(width: 4),
-                        Text(
-                          DistanceHelper.format(widget.distanceKm!),
-                          style: const TextStyle(color: Colors.grey),
-                        ),
+                        Text(DistanceHelper.format(widget.distanceKm!),
+                            style: const TextStyle(color: Colors.grey)),
                       ] else if (widget.service.ville.isNotEmpty) ...[
-                        const Icon(Icons.location_on,
-                            color: Colors.grey, size: 16),
+                        const Icon(Icons.location_on, color: Colors.grey, size: 16),
                         const SizedBox(width: 4),
-                        Text(
-                          widget.service.ville,
-                          style: const TextStyle(color: Colors.grey),
-                        ),
+                        Text(widget.service.ville, style: const TextStyle(color: Colors.grey)),
                       ],
                     ],
                   ),
                   const SizedBox(height: 20),
 
                   // Description
-                  const Text(
-                    'Description',
-                    style: TextStyle(
-                        fontSize: 17, fontWeight: FontWeight.bold),
-                  ),
+                  const Text('Description', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Text(
                     widget.service.description,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
-                      height: 1.6,
-                    ),
+                    style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.6),
                   ),
                   const SizedBox(height: 20),
 
-                  // Profil vendeur
-                  const Text(
-                    'Le prestataire',
-                    style: TextStyle(
-                        fontSize: 17, fontWeight: FontWeight.bold),
-                  ),
+                  // Profil du prestataire
+                  const Text('Le prestataire', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
                   Container(
                     padding: const EdgeInsets.all(14),
@@ -287,57 +258,41 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2)),
                       ],
                     ),
                     child: _isLoadingOwner
-                        ? const Center(
-                            child: CircularProgressIndicator(
-                                color: primaryColor))
+                        ? const Center(child: CircularProgressIndicator(color: primaryColor))
                         : _owner == null
                             ? const Text('Profil indisponible')
                             : Row(
                                 children: [
                                   CircleAvatar(
                                     radius: 28,
-                                    backgroundColor:
-                                        const Color(0xFFE0F2EE),
-                                    backgroundImage:
-                                        _owner!.photoUrl.isNotEmpty
-                                            ? NetworkImage(
-                                                _owner!.photoUrl)
-                                            : null,
+                                    backgroundColor: const Color(0xFFE0F2EE),
+                                    backgroundImage: _owner!.photoUrl.isNotEmpty
+                                        ? NetworkImage(_owner!.photoUrl)
+                                        : null,
                                     child: _owner!.photoUrl.isEmpty
                                         ? Text(
-                                            _owner!.nom.isNotEmpty
-                                                ? _owner!.nom[0]
-                                                    .toUpperCase()
-                                                : '?',
-                                            style: const TextStyle(
-                                              color: primaryColor,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 20,
-                                            ),
+                                            _owner!.nom.isNotEmpty ? _owner!.nom[0].toUpperCase() : '?',
+                                            style: const TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 20),
                                           )
                                         : null,
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        // ====================== NOM CLIQUABLE ======================
+                                        // Nom cliquable
                                         GestureDetector(
                                           onTap: () => Navigator.push(
                                             context,
                                             MaterialPageRoute(
                                               builder: (_) => PublicProfileScreen(
-                                                  userId: widget.service.userId),
+                                                userId: widget.service.userId,
+                                              ),
                                             ),
                                           ),
                                           child: Text(
@@ -348,22 +303,15 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                                             ),
                                           ),
                                         ),
-                                        // =================================================================
                                         if (_owner!.isPro)
                                           Text(
                                             _owner!.categorie,
-                                            style: const TextStyle(
-                                              color: primaryColor,
-                                              fontSize: 12,
-                                            ),
+                                            style: const TextStyle(color: primaryColor, fontSize: 12),
                                           ),
                                         if (_owner!.bio.isNotEmpty)
                                           Text(
                                             _owner!.bio,
-                                            style: const TextStyle(
-                                              color: Colors.grey,
-                                              fontSize: 12,
-                                            ),
+                                            style: const TextStyle(color: Colors.grey, fontSize: 12),
                                             maxLines: 2,
                                             overflow: TextOverflow.ellipsis,
                                           ),
@@ -392,21 +340,16 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         children: [
           const Icon(Icons.info_outline, color: Colors.grey),
           const SizedBox(width: 8),
-          const Expanded(
-            child: Text('C\'est votre annonce',
-                style: TextStyle(color: Colors.grey)),
-          ),
+          const Expanded(child: Text('C\'est votre annonce', style: TextStyle(color: Colors.grey))),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Retour',
-                style: TextStyle(color: primaryColor)),
+            child: const Text('Retour', style: TextStyle(color: primaryColor)),
           ),
         ],
       ),
     );
   }
 
-  // ====================== MISE À JOUR : _contactBar avec Messagerie ======================
   Widget _contactBar() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -416,78 +359,49 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         children: [
           Row(
             children: [
-              // Bouton Appeler
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _callOwner,
                   icon: const Icon(Icons.phone, color: primaryColor),
-                  label: const Text(
-                    'Appeler',
-                    style: TextStyle(
-                      color: primaryColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  label: const Text('Appeler', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     side: const BorderSide(color: primaryColor),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              // Bouton WhatsApp
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: _whatsappOwner,
                   icon: const Icon(Icons.chat, color: Colors.white),
-                  label: const Text(
-                    'WhatsApp',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  label: const Text('WhatsApp', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF25D366),
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          // Bouton Messagerie MitaAn
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _owner != null
                   ? () => Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => ChatScreen(otherUser: _owner!),
-                        ),
+                        MaterialPageRoute(builder: (_) => ChatScreen(otherUser: _owner!)),
                       )
                   : null,
               icon: const Icon(Icons.message_outlined, color: Colors.white),
-              label: const Text(
-                'Messagerie MitaAn',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              label: const Text('Messagerie MitaAn', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ),
@@ -495,15 +409,11 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       ),
     );
   }
-  // ============================================================================
 
   Widget _placeholder() {
     return Container(
       color: const Color(0xFFE8F5F0),
-      child: const Center(
-        child: Icon(Icons.image_outlined,
-            size: 64, color: Color(0xFF1D9E75)),
-      ),
+      child: const Center(child: Icon(Icons.image_outlined, size: 64, color: Color(0xFF1D9E75))),
     );
   }
 }
