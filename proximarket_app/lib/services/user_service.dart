@@ -35,7 +35,6 @@ class UserService {
         maxHeight: 400,
         imageQuality: 60,
       );
-      // Retourne null si l'utilisateur annule — c'est normal, pas une erreur
       if (picked != null) return File(picked.path);
       return null;
     } catch (e) {
@@ -45,27 +44,18 @@ class UserService {
 
   // ─────────────────────────────────────────
   // CHANGER LA PHOTO DE PROFIL
-  // Retourne l'URL si succès, null si l'utilisateur a annulé la sélection
-  // Lève une exception si l'upload échoue
   // ─────────────────────────────────────────
   Future<String?> changeProfilePhoto(String uid, ImageSource source) async {
-    // 1. Sélectionner le fichier
     final file = await pickImage(source);
-
-    // L'utilisateur a annulé la sélection → pas une erreur
     if (file == null) return null;
 
-    // 2. Uploader sur Cloudinary
     final cloudinary = CloudinaryService();
     final url = await cloudinary.uploadProfilePhoto(file);
 
-    // ✅ CORRECTION : si Cloudinary retourne null, lever une exception explicite
-    // au lieu de ne rien faire et laisser Firestore non mis à jour
     if (url == null) {
       throw 'L\'upload de la photo a échoué. Vérifiez votre connexion et réessayez.';
     }
 
-    // 3. Mettre à jour Firestore avec la nouvelle URL
     try {
       await _firestore.collection('users').doc(uid).update({
         'photoUrl': url,
@@ -86,5 +76,26 @@ class UserService {
     } catch (e) {
       throw 'Erreur lors de la mise à jour du profil : $e';
     }
+  }
+
+  // =============================================
+  // NOUVELLES MÉTHODES : FAVORIS
+  // =============================================
+
+  Future<void> addFavorite(String uid, String serviceId) async {
+    await _firestore.collection('users').doc(uid).update({
+      'favorites': FieldValue.arrayUnion([serviceId]),
+    });
+  }
+
+  Future<void> removeFavorite(String uid, String serviceId) async {
+    await _firestore.collection('users').doc(uid).update({
+      'favorites': FieldValue.arrayRemove([serviceId]),
+    });
+  }
+
+  Future<List<String>> getFavorites(String uid) async {
+    final doc = await _firestore.collection('users').doc(uid).get();
+    return List<String>.from(doc.data()?['favorites'] ?? []);
   }
 }

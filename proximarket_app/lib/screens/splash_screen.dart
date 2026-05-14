@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';   // ← Import ajouté
 
 import '../utils/app_colors.dart';
-import '../main.dart';           // ← Import ajouté pour AuthWrapper
+import '../main.dart';           // Pour AuthWrapper
 import 'onboarding_screen.dart';
+import 'package:mitan_app/screens/auth/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -62,15 +64,23 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
-  // ====================== CORRECTION : Navigation via AuthWrapper ======================
-  void _navigate() {
+  // ====================== NOUVELLE VERSION _navigate() ======================
+  void _navigate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final onboardingDone = prefs.getBool('onboarding_done') ?? false;
     final user = FirebaseAuth.instance.currentUser;
+
+    if (!mounted) return;
+
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            user != null ? const AuthWrapper() : const OnboardingScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+        pageBuilder: (_, __, ___) => user != null
+            ? const AuthWrapper()
+            : onboardingDone
+                ? LoginScreen()
+                : const OnboardingScreen(),
+        transitionsBuilder: (_, animation, __, child) =>
             FadeTransition(opacity: animation, child: child),
         transitionDuration: const Duration(milliseconds: 500),
       ),

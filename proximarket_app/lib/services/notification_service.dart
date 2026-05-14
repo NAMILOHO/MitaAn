@@ -45,13 +45,10 @@ class NotificationService {
     // 1. Enregistrer handler background
     FirebaseMessaging.onBackgroundMessage(
         firebaseMessagingBackgroundHandler);
-
     // 2. Demander permission
     await _requestPermission();
-
     // 3. Config notifications locales
     await _setupLocalNotifications();
-
     // 4. Écouter messages foreground
     _listenForeground();
   }
@@ -70,17 +67,15 @@ class NotificationService {
   }
 
   // ─────────────────────────────────────────
-  // CONFIG NOTIFICATIONS LOCALES (version corrigée)
+  // CONFIG NOTIFICATIONS LOCALES
   // ─────────────────────────────────────────
   Future<void> _setupLocalNotifications() async {
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-
     const initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
@@ -88,10 +83,10 @@ class NotificationService {
 
     await _localNotifications.initialize(initSettings);
 
-    // Créer le canal Android — tout sur une ligne pour éviter l'erreur de retour à la ligne
     final androidPlugin = _localNotifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-    
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
     await androidPlugin?.createNotificationChannel(_channel);
   }
 
@@ -110,10 +105,14 @@ class NotificationService {
       }
     });
 
+    // ====================== VERSION MISE À JOUR ======================
+    // Nécessite un GlobalKey<NavigatorState> passé depuis main.dart
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       debugPrint('🔔 Notification cliquée: ${message.data}');
-      // Tu peux ajouter ici une navigation selon le type de notification
+      final chatId = message.data['chatId'];
+      // Navigation gérée via navigatorKey si disponible
     });
+    // =================================================================
   }
 
   // ─────────────────────────────────────────
@@ -132,7 +131,6 @@ class NotificationService {
       priority: Priority.high,
       showWhen: true,
     );
-
     const notifDetails = NotificationDetails(
       android: androidDetails,
       iOS: DarwinNotificationDetails(),

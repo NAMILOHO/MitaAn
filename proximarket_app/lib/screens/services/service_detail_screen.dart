@@ -6,7 +6,8 @@ import '../../models/service_model.dart';
 import '../../models/user_model.dart';
 import '../../services/user_service.dart';
 import '../../utils/distance_helper.dart';
-import '../chat/chat_screen.dart';   // ← Import ajouté
+import '../chat/chat_screen.dart';
+import '../profile/public_profile_screen.dart'; // ← Import ajouté
 
 class ServiceDetailScreen extends StatefulWidget {
   final ServiceModel service;
@@ -55,7 +56,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       );
       return;
     }
-
     final uri = Uri(scheme: 'tel', path: _owner!.phone);
     try {
       await launchUrl(uri);
@@ -82,20 +82,17 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       return;
     }
 
-    // Nettoyer le numéro
     String phone = _owner!.phone
         .replaceAll(' ', '')
         .replaceAll('-', '')
         .replaceAll('+', '');
 
-    // Ajouter indicatif Côte d'Ivoire si absent
     if (!phone.startsWith('225') && phone.length <= 10) {
       phone = '225$phone';
     }
 
     final message = Uri.encodeComponent(
-      'Bonjour, je vous contacte via MitaAn '
-      'concernant votre annonce : ${widget.service.titre}',
+      'Bonjour, je vous contacte via MitaAn concernant votre annonce : ${widget.service.titre}',
     );
 
     final uri = Uri.parse('https://wa.me/$phone?text=$message');
@@ -334,13 +331,24 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          _owner!.nom,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 15,
+                                        // ====================== NOM CLIQUABLE ======================
+                                        GestureDetector(
+                                          onTap: () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => PublicProfileScreen(
+                                                  userId: widget.service.userId),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            _owner!.nom,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15,
+                                            ),
                                           ),
                                         ),
+                                        // =================================================================
                                         if (_owner!.isPro)
                                           Text(
                                             _owner!.categorie,
@@ -430,7 +438,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-
               // Bouton WhatsApp
               Expanded(
                 child: ElevatedButton.icon(
@@ -455,7 +462,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             ],
           ),
           const SizedBox(height: 8),
-
           // Bouton Messagerie MitaAn
           SizedBox(
             width: double.infinity,

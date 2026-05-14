@@ -6,6 +6,7 @@ import '../../providers/service_provider.dart';
 
 import 'service_detail_screen.dart';
 import 'create_service_screen.dart';
+import 'edit_service_screen.dart'; // ✅ AJOUT
 
 class MyServicesScreen extends StatefulWidget {
   const MyServicesScreen({super.key});
@@ -30,7 +31,35 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
     }
   }
 
-  // Confirmation avant suppression
+  // ─────────────────────────────────────────
+  // ✅ TOGGLE ACTIF / INACTIF
+  // ─────────────────────────────────────────
+  Future<void> _toggleActive(ServiceModel service) async {
+    final newStatus = !service.isActive;
+
+    await context.read<ServiceProvider>().toggleServiceActive(
+          service.id,
+          newStatus,
+        );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            newStatus
+                ? 'Annonce activée ✅'
+                : 'Annonce désactivée',
+          ),
+          backgroundColor: newStatus ? Colors.green : Colors.orange,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  // ─────────────────────────────────────────
+  // CONFIRMATION AVANT SUPPRESSION
+  // ─────────────────────────────────────────
   Future<void> _confirmDelete(
       BuildContext context, ServiceModel service) async {
     final confirm = await showDialog<bool>(
@@ -44,8 +73,8 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'Voulez-vous vraiment supprimer "${service.titre}" ?'
-          '\nCette action est irréversible.',
+          'Voulez-vous vraiment supprimer "${service.titre}" ?\n'
+          'Cette action est irréversible.',
         ),
         actions: [
           TextButton(
@@ -71,9 +100,8 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
     );
 
     if (confirm == true && context.mounted) {
-      final success = await context
-          .read<ServiceProvider>()
-          .deleteService(service.id);
+      final success =
+          await context.read<ServiceProvider>().deleteService(service.id);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -90,6 +118,9 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
     }
   }
 
+  // ─────────────────────────────────────────
+  // BUILD
+  // ─────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -108,7 +139,7 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
           ),
         ],
       ),
-      // Bouton ajouter une annonce
+      // Bouton publier une nouvelle annonce
       floatingActionButton: FloatingActionButton(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
@@ -136,19 +167,12 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.post_add,
-                    size: 80,
-                    color: Colors.grey,
-                  ),
+                  const Icon(Icons.post_add, size: 80, color: Colors.grey),
                   const SizedBox(height: 16),
                   const Text(
                     'Vous n\'avez pas encore\nd\'annonces publiées',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
@@ -167,12 +191,9 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
                       backgroundColor: primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
+                          horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
                 ],
@@ -197,13 +218,19 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
     );
   }
 
-  Widget _buildMyServiceCard(
-      BuildContext context, ServiceModel service) {
+  // ─────────────────────────────────────────
+  // CARTE D'UNE ANNONCE
+  // ─────────────────────────────────────────
+  Widget _buildMyServiceCard(BuildContext context, ServiceModel service) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        // ✅ Bordure subtile rouge si inactif
+        border: service.isActive
+            ? null
+            : Border.all(color: Colors.orange.withValues(alpha: 0.4)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
@@ -233,9 +260,7 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
             title: Text(
               service.titre,
               style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              ),
+                  fontWeight: FontWeight.bold, fontSize: 15),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -246,9 +271,7 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
                 // Badge catégorie
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
+                      horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: primaryColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
@@ -263,10 +286,10 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                // Prix
+                // Prix + unité
                 Text(
                   service.prix > 0
-                      ? '${service.prix.toStringAsFixed(0)} FCFA'
+                      ? '${service.prix.toStringAsFixed(0)} FCFA  •  ${service.unite}'
                       : 'Prix à négocier',
                   style: const TextStyle(
                     color: primaryColor,
@@ -275,26 +298,24 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
                 ),
               ],
             ),
-            // Statut actif/inactif
-            trailing: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 4,
-              ),
-              decoration: BoxDecoration(
-                color: service.isActive
-                    ? Colors.green.withValues(alpha: 0.1)
-                    : Colors.grey.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                service.isActive ? 'Active' : 'Inactive',
-                style: TextStyle(
-                  color: service.isActive ? Colors.green : Colors.grey,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+            // ✅ Toggle Actif / Inactif
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Switch(
+                  value: service.isActive,
+                  activeColor: primaryColor,
+                  onChanged: (_) => _toggleActive(service),
                 ),
-              ),
+                Text(
+                  service.isActive ? 'Active' : 'Inactive',
+                  style: TextStyle(
+                    color: service.isActive ? primaryColor : Colors.grey,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
             onTap: () => Navigator.push(
               context,
@@ -308,11 +329,40 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 8,
-            ),
+                horizontal: 12, vertical: 8),
             child: Row(
               children: [
+                // ✅ Bouton Modifier → EditServiceScreen
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final updated = await Navigator.push<bool>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              EditServiceScreen(service: service),
+                        ),
+                      );
+                      if (updated == true) _loadMyServices();
+                    },
+                    icon: const Icon(
+                      Icons.edit_outlined,
+                      size: 16,
+                      color: primaryColor,
+                    ),
+                    label: const Text(
+                      'Modifier',
+                      style: TextStyle(color: primaryColor),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: primaryColor),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
                 // Bouton Voir
                 Expanded(
                   child: OutlinedButton.icon(
@@ -326,42 +376,26 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
                     icon: const Icon(
                       Icons.visibility_outlined,
                       size: 16,
-                      color: primaryColor,
+                      color: Colors.grey,
                     ),
                     label: const Text(
                       'Voir',
-                      style: TextStyle(color: primaryColor),
+                      style: TextStyle(color: Colors.grey),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: primaryColor),
+                      side: BorderSide(color: Colors.grey.shade400),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                          borderRadius: BorderRadius.circular(8)),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
 
                 // Bouton Supprimer
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _confirmDelete(context, service),
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      size: 16,
-                      color: Colors.red,
-                    ),
-                    label: const Text(
-                      'Supprimer',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.red),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
+                IconButton(
+                  onPressed: () => _confirmDelete(context, service),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  tooltip: 'Supprimer',
                 ),
               ],
             ),
@@ -379,11 +413,7 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
         color: const Color(0xFFE8F5F0),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: const Icon(
-        Icons.image_outlined,
-        color: primaryColor,
-        size: 28,
-      ),
+      child: const Icon(Icons.image_outlined, color: primaryColor, size: 28),
     );
   }
 }

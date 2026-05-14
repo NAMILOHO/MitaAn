@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // ← Import ajouté
+
 import '../utils/app_colors.dart';
 import 'auth/login_screen.dart';
 import 'auth/register_screen.dart';
@@ -73,11 +75,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
-                onPageChanged: (i) =>
-                    setState(() => _currentPage = i),
+                onPageChanged: (i) => setState(() => _currentPage = i),
                 itemCount: _pages.length,
-                itemBuilder: (_, i) =>
-                    _buildPage(_pages[i]),
+                itemBuilder: (_, i) => _buildPage(_pages[i]),
               ),
             ),
 
@@ -177,7 +177,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Icône avec couleur dynamique
           Container(
             width: 150,
             height: 150,
@@ -193,7 +192,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           const SizedBox(height: 48),
 
-          // Titre
           Text(
             data.title,
             style: const TextStyle(
@@ -205,7 +203,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Description
           Text(
             data.description,
             style: const TextStyle(
@@ -220,17 +217,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  void _goToLogin() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
-  }
+  // ====================== MÉTHODES MISES À JOUR ======================
 
-  void _goToRegister() {
+  void _goToRegister() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboarding_done', true);
+    if (!mounted) return;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const RegisterScreen()),
+    );
+  }
+
+  void _goToLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboarding_done', true);
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
     );
   }
 }
