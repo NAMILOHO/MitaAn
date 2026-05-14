@@ -148,7 +148,7 @@ class _HomeTabState extends State<_HomeTab> {
     _loadUser();
  
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ServiceProvider>().loadAllServices();
+      context.read<ServiceProvider>().loadAllServices(reset: true);
     });
   }
  
@@ -515,51 +515,43 @@ class _HomeTabState extends State<_HomeTab> {
                   );
                 }
  
-                final preview = provider.services.take(3).toList();
- 
                 return Column(
                   children: [
-                    // Cartes services
-                    ...preview.map(
-                      (service) => ServiceCard(
-                        service: service,
- 
-                        onTap: () {
-                          Navigator.push(
+                    // Lazy loading : ListView non scrollable limité à 3 items
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: provider.services.take(3).length,
+                      itemBuilder: (context, index) {
+                        final service = provider.services.elementAt(index);
+                        return ServiceCard(
+                          service: service,
+                          onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => ServiceDetailScreen(
-                                service: service,
-                              ),
+                              builder: (_) => ServiceDetailScreen(service: service),
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        );
+                      },
                     ),
- 
                     const SizedBox(height: 8),
- 
-                    // ── BOUTON VOIR TOUTES LES ANNONCES ──
                     SizedBox(
                       width: double.infinity,
- 
                       child: OutlinedButton(
                         onPressed: () {
-                          final homeState = context
-                              .findAncestorStateOfType<HomeScreenState>();
- 
+                          final homeState =
+                              context.findAncestorStateOfType<HomeScreenState>();
                           if (homeState != null) {
                             homeState.changeTab(2); // index 2 = Rechercher
                           }
                         },
- 
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: primaryColor),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
- 
                         child: const Text(
                           'Voir toutes les annonces',
                           style: TextStyle(color: primaryColor),

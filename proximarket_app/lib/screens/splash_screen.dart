@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';   // ← Import ajouté
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/app_colors.dart';
 import '../main.dart';           // Pour AuthWrapper
 import 'onboarding_screen.dart';
-import 'package:mitan_app/screens/auth/login_screen.dart';
+import 'auth/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -64,7 +64,7 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
-  // ====================== NOUVELLE VERSION _navigate() ======================
+  // ====================== NAVIGATION MISE À JOUR ======================
   void _navigate() async {
     final prefs = await SharedPreferences.getInstance();
     final onboardingDone = prefs.getBool('onboarding_done') ?? false;
@@ -75,12 +75,12 @@ class _SplashScreenState extends State<SplashScreen>
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => user != null
-            ? const AuthWrapper()
-            : onboardingDone
-                ? LoginScreen()
-                : const OnboardingScreen(),
-        transitionsBuilder: (_, animation, __, child) =>
+        pageBuilder: (context, animation, secondaryAnimation) {
+          if (user != null) return const AuthWrapper();
+          if (onboardingDone) return const LoginScreen();
+          return const OnboardingScreen();
+        },
+        transitionsBuilder: (context, animation, secondaryAnimation, child) =>
             FadeTransition(opacity: animation, child: child),
         transitionDuration: const Duration(milliseconds: 500),
       ),
@@ -112,7 +112,7 @@ class _SplashScreenState extends State<SplashScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // ── Logo ──
+                      // Logo
                       ScaleTransition(
                         scale: _scaleAnim,
                         child: Container(
@@ -137,7 +137,8 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
                       const SizedBox(height: 32),
-                      // ── Nom app ──
+
+                      // Nom de l'application
                       Transform.translate(
                         offset: Offset(0, _slideAnim.value),
                         child: const Text(
@@ -151,7 +152,8 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // ── Slogan ──
+
+                      // Slogan
                       Transform.translate(
                         offset: Offset(0, _slideAnim.value),
                         child: const Text(
@@ -164,7 +166,8 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
                       const SizedBox(height: 80),
-                      // ── Loader ──
+
+                      // Loader
                       const SizedBox(
                         width: 28,
                         height: 28,

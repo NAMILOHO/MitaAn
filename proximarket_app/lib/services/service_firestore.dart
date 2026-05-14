@@ -118,22 +118,69 @@ class ServiceFirestore {
     });
   }
 
-  // ─────────────────────────────────────────
-  // RÉCUPÉRER TOUTES LES ANNONCES ACTIVES
-  // ─────────────────────────────────────────
-  Future<List<ServiceModel>> getAllServices({int limit = 20}) async {
+  // =============================================
+  // VERSION PAGINÉE - getAllServices
+  // =============================================
+  Future<List<ServiceModel>> getAllServices({
+    int limit = 10,
+    DocumentSnapshot? startAfter,
+  }) async {
     try {
-      final snapshot = await _firestore
+      Query query = _firestore
           .collection('services')
           .where('isActive', isEqualTo: true)
           .orderBy('createdAt', descending: true)
-          .limit(limit)
-          .get();
+          .limit(limit);
+
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
+
+      final snapshot = await query.get();
       return snapshot.docs
-          .map((doc) => ServiceModel.fromMap(doc.data(), doc.id))
+          .map((doc) => ServiceModel.fromMap(
+                doc.data() as Map<String, dynamic>,
+                doc.id,
+              ))
           .toList();
     } catch (e) {
       throw 'Erreur chargement annonces : $e';
+    }
+  }
+
+  // =============================================
+  // PAGINATION AVANCÉE (recommandée)
+  // =============================================
+  Future<({List<ServiceModel> services, DocumentSnapshot? lastDoc})>
+      getAllServicesPaginated({
+    int limit = 10,
+    DocumentSnapshot? startAfter,
+  }) async {
+    try {
+      Query query = _firestore
+          .collection('services')
+          .where('isActive', isEqualTo: true)
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
+
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
+
+      final snapshot = await query.get();
+
+      final services = snapshot.docs
+          .map((doc) => ServiceModel.fromMap(
+                doc.data() as Map<String, dynamic>,
+                doc.id,
+              ))
+          .toList();
+
+      final lastDoc = snapshot.docs.isNotEmpty ? snapshot.docs.last : null;
+
+      return (services: services, lastDoc: lastDoc);
+    } catch (e) {
+      throw 'Erreur pagination annonces : $e';
     }
   }
 
@@ -177,11 +224,14 @@ class ServiceFirestore {
   }
 
   // =============================================
-  // NOUVELLE MÉTHODE AJOUTÉE
+  // RÉCUPÉRER UNE ANNONCE PAR ID
   // =============================================
   Future<ServiceModel?> getServiceById(String serviceId) async {
     try {
-      final doc = await _firestore.collection('services').doc(serviceId).get();
+      final doc = await _firestore
+          .collection('services')
+          .doc(serviceId)
+          .get();
       if (!doc.exists) return null;
       return ServiceModel.fromMap(doc.data()!, doc.id);
     } catch (_) {

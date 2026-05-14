@@ -20,25 +20,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _OnboardingData(
       icon: Icons.location_on,
       title: 'Services près de vous',
-      description:
-          'MitaAn connecte les professionnels locaux\n'
-          'avec les clients de leur quartier.',
+      description: 'MitaAn connecte les professionnels locaux\navec les clients de leur quartier.',
       color: const Color(0xFF1D9E75),
     ),
     _OnboardingData(
       icon: Icons.store,
       title: 'Vendez facilement',
-      description:
-          'Publiez vos produits et services en quelques\n'
-          'secondes et touchez des clients locaux.',
+      description: 'Publiez vos produits et services en quelques\nsecondes et touchez des clients locaux.',
       color: const Color(0xFF1976D2),
     ),
     _OnboardingData(
       icon: Icons.chat_bubble_outline,
       title: 'Contactez directement',
-      description:
-          'Discutez via la messagerie intégrée\n'
-          'ou contactez par WhatsApp en un clic.',
+      description: 'Discutez via la messagerie intégrée\nou contactez par WhatsApp en un clic.',
       color: const Color(0xFF388E3C),
     ),
   ];
@@ -130,9 +124,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         ),
                       ),
                       child: Text(
-                        _currentPage < _pages.length - 1
-                            ? 'Suivant'
-                            : 'Commencer',
+                        _currentPage < _pages.length - 1 ? 'Suivant' : 'Commencer',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -191,7 +183,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
           const SizedBox(height: 48),
-
           Text(
             data.title,
             style: const TextStyle(
@@ -202,7 +193,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
-
           Text(
             data.description,
             style: const TextStyle(
@@ -218,7 +208,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   // ====================== MÉTHODES MISES À JOUR ======================
-
   void _goToRegister() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('onboarding_done', true);

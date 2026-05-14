@@ -140,26 +140,24 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
       if (!(_step1Key.currentState?.validate() ?? false)) return;
 
       if (_selectedCategory == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Veuillez sélectionner une catégorie'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showError('Veuillez sélectionner une catégorie.');
         return;
       }
+
+      final prix = double.tryParse(_prixController.text.trim());
+      if (_prixController.text.trim().isNotEmpty &&
+          (prix == null || prix < 0)) {
+        _showError('Le prix doit être un nombre positif.');
+        return;
+      }
+
       setState(() => _currentStep = 1);
       return;
     }
 
     if (_currentStep == 1) {
       if (_selectedImages.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ajoutez au moins une photo'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showError('Ajoutez au moins une photo');
         return;
       }
       setState(() => _currentStep = 2);
@@ -178,19 +176,46 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
   }
 
   // =============================================
-  // PUBLICATION
+  // PUBLICATION SÉCURISÉE
   // =============================================
   Future<void> _publish() async {
+    // Validation finale avant envoi
+    final titre = _titreController.text.trim();
+    final description = _descriptionController.text.trim();
+    final prixStr = _prixController.text.trim();
+    final prix = double.tryParse(prixStr) ?? -1;
+
+    if (titre.length < 5 || titre.length > 100) {
+      _showError('Le titre doit contenir entre 5 et 100 caractères.');
+      return;
+    }
+    if (description.length < 20) {
+      _showError('La description doit contenir au moins 20 caractères.');
+      return;
+    }
+    if (prix <= 0 && prixStr.isNotEmpty) {
+      _showError('Le prix doit être supérieur à 0 (ou laisser vide pour "à négocier").');
+      return;
+    }
+    if (_selectedImages.isEmpty) {
+      _showError('Ajoutez au moins une photo.');
+      return;
+    }
+    if (_selectedCategory == null) {
+      _showError('Veuillez sélectionner une catégorie.');
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
     final success = await context.read<ServiceProvider>().createService(
       userId: uid,
-      titre: _titreController.text.trim(),
-      description: _descriptionController.text.trim(),
+      titre: titre,
+      description: description,
       categorie: _selectedCategory!,
-      prix: double.tryParse(_prixController.text.trim()) ?? 0.0,
+      prix: prix < 0 ? 0.0 : prix,
       unite: _selectedUnite,
       imageFiles: _selectedImages,
       gpsLat: _gpsLat,
@@ -210,17 +235,22 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
         ),
       );
       _resetForm();
-      // Retour à l'accueil
       if (mounted) Navigator.pop(context);
     } else {
       final err = context.read<ServiceProvider>().errorMessage;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(err ?? 'Erreur lors de la publication'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showError(err ?? 'Erreur lors de la publication');
     }
+  }
+
+  // Helper pour afficher les erreurs
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _resetForm() {
@@ -292,9 +322,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                             ),
                           ),
                           child: Text(
-                            _currentStep == 2
-                                ? 'Publier l\'annonce'
-                                : 'Suivant',
+                            _currentStep == 2 ? 'Publier l\'annonce' : 'Suivant',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -326,7 +354,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
   }
 
   // =============================================
-  // ÉTAPE 1 — Informations
+  // ÉTAPES
   // =============================================
   Step _buildStep1() {
     return Step(
@@ -364,8 +392,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
             TextFormField(
               controller: _descriptionController,
               maxLines: 4,
-              decoration: _inputDecoration(
-                  'Description du service', Icons.description),
+              decoration: _inputDecoration('Description du service', Icons.description),
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return 'Description requise';
                 if (v.trim().length < 20) return 'Minimum 20 caractères';
@@ -400,8 +427,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                     items: _unites
                         .map((u) => DropdownMenuItem(value: u, child: Text(u)))
                         .toList(),
-                    onChanged: (v) =>
-                        setState(() => _selectedUnite = v ?? 'forfait'),
+                    onChanged: (v) => setState(() => _selectedUnite = v ?? 'forfait'),
                   ),
                 ),
               ],
@@ -412,9 +438,6 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
     );
   }
 
-  // =============================================
-  // ÉTAPE 2 — Photos
-  // =============================================
   Step _buildStep2() {
     return Step(
       title: const Text('Photos'),
@@ -447,12 +470,9 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                     child: const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_photo_alternate,
-                            color: primaryColor, size: 28),
+                        Icon(Icons.add_photo_alternate, color: primaryColor, size: 28),
                         SizedBox(height: 4),
-                        Text('Ajouter',
-                            style: TextStyle(
-                                color: primaryColor, fontSize: 11)),
+                        Text('Ajouter', style: TextStyle(color: primaryColor, fontSize: 11)),
                       ],
                     ),
                   ),
@@ -482,11 +502,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                             color: Colors.red,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
-                            Icons.close,
-                            color: Colors.white,
-                            size: 16,
-                          ),
+                          child: const Icon(Icons.close, color: Colors.white, size: 16),
                         ),
                       ),
                     ),
@@ -500,9 +516,6 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
     );
   }
 
-  // =============================================
-  // ÉTAPE 3 — Localisation
-  // =============================================
   Step _buildStep3() {
     return Step(
       title: const Text('Localisation'),
@@ -533,9 +546,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                 Expanded(
                   child: _locationLoaded
                       ? Text(
-                          _ville.isNotEmpty
-                              ? _ville
-                              : 'Position non disponible',
+                          _ville.isNotEmpty ? _ville : 'Position non disponible',
                           style: const TextStyle(fontWeight: FontWeight.w500),
                         )
                       : const Row(
@@ -543,8 +554,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                             SizedBox(
                               width: 16,
                               height: 16,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: primaryColor),
+                              child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor),
                             ),
                             SizedBox(width: 8),
                             Text('Récupération de la position...'),
@@ -575,14 +585,9 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
           _buildRecapRow('Catégorie', _selectedCategory ?? '-'),
           _buildRecapRow(
             'Prix',
-            _prixController.text.isNotEmpty
-                ? '${_prixController.text} FCFA / $_selectedUnite'
-                : '-',
+            _prixController.text.isNotEmpty ? '${_prixController.text} FCFA / $_selectedUnite' : '-',
           ),
-          _buildRecapRow(
-            'Photos',
-            '${_selectedImages.length} photo(s)',
-          ),
+          _buildRecapRow('Photos', '${_selectedImages.length} photo(s)'),
         ],
       ),
     );
@@ -596,10 +601,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
         children: [
           SizedBox(
             width: 90,
-            child: Text(
-              '$label :',
-              style: const TextStyle(color: Colors.grey, fontSize: 14),
-            ),
+            child: Text('$label :', style: const TextStyle(color: Colors.grey, fontSize: 14)),
           ),
           Expanded(
             child: Text(

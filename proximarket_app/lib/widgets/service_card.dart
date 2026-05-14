@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../models/service_model.dart';
 import '../utils/distance_helper.dart';
+import '../services/user_service.dart';
+import 'favorite_button.dart';
 
-class ServiceCard extends StatelessWidget {
+class ServiceCard extends StatefulWidget {
   final ServiceModel service;
   final double? distanceKm;
   final VoidCallback? onTap;
@@ -14,17 +18,40 @@ class ServiceCard extends StatelessWidget {
     this.onTap,
   });
 
+  @override
+  State<ServiceCard> createState() => _ServiceCardState();
+}
+
+class _ServiceCardState extends State<ServiceCard> {
   static const Color primaryColor = Color(0xFF1D9E75);
+  List<String> _favorites = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      final ids = await UserService().getFavorites(uid);
+      if (mounted) {
+        setState(() => _favorites = ids);
+      }
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
     // ====================== DEBUG : Photos ======================
     // ignore: avoid_print
-    print('Photos de "${service.titre}": ${service.photos}');
+    print('Photos de "${widget.service.titre}": ${widget.service.photos}');
     // ============================================================
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
@@ -41,52 +68,69 @@ class ServiceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Photo principale (avec loading + error) ──
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(16),
-              ),
-              child: service.photos.isNotEmpty
-                  ? Image.network(
-                      service.photos.first,
-                      height: 160,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      // Placeholder pendant le chargement
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Container(
+            // Photo principale avec bouton favori
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                  child: widget.service.photos.isNotEmpty
+                      ? Image.network(
+                          widget.service.photos.first,
                           height: 160,
-                          color: const Color(0xFFE8F5F0),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: primaryColor,
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                  : null,
-                            ),
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) =>
-                          _placeholderImage(),
-                    )
-                  : _placeholderImage(),
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              height: 160,
+                              color: const Color(0xFFE8F5F0),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: primaryColor,
+                                  value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) =>
+                              _placeholderImage(),
+                        )
+                      : _placeholderImage(),
+                ),
+                // Bouton Favori superposé
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: FavoriteButton(
+                      serviceId: widget.service.id,
+                      favorites: _favorites,
+                    ),
+                  ),
+                ),
+              ],
             ),
 
-            // ── Infos ──
+            // Infos
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Titre + Badge catégorie
                   Row(
                     children: [
                       Expanded(
                         child: Text(
-                          service.titre,
+                          widget.service.titre,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
@@ -105,7 +149,7 @@ class ServiceCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          service.categorie,
+                          widget.service.categorie,
                           style: const TextStyle(
                             color: primaryColor,
                             fontSize: 11,
@@ -117,9 +161,8 @@ class ServiceCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
 
-                  // Description
                   Text(
-                    service.description,
+                    widget.service.description,
                     style: const TextStyle(
                       color: Colors.grey,
                       fontSize: 13,
@@ -129,13 +172,11 @@ class ServiceCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
 
-                  // Prix + Distance + Ville
                   Row(
                     children: [
-                      // Prix
                       Text(
-                        service.prix > 0
-                            ? '${service.prix.toStringAsFixed(0)} FCFA'
+                        widget.service.prix > 0
+                            ? '${widget.service.prix.toStringAsFixed(0)} FCFA'
                             : 'Prix à négocier',
                         style: const TextStyle(
                           color: primaryColor,
@@ -144,33 +185,25 @@ class ServiceCard extends StatelessWidget {
                         ),
                       ),
                       const Spacer(),
-
-                      // Distance ou Ville
-                      if (distanceKm != null) ...[
+                      if (widget.distanceKm != null) ...[
                         const Icon(Icons.location_on, size: 14, color: Colors.grey),
                         const SizedBox(width: 2),
                         Text(
-                          DistanceHelper.format(distanceKm!),
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                          ),
+                          DistanceHelper.format(widget.distanceKm!),
+                          style: const TextStyle(color: Colors.grey, fontSize: 12),
                         ),
                         const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: _proximityColor(distanceKm!)
+                            color: _proximityColor(widget.distanceKm!)
                                 .withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            DistanceHelper.getProximityLabel(distanceKm!),
+                            DistanceHelper.getProximityLabel(widget.distanceKm!),
                             style: TextStyle(
-                              color: _proximityColor(distanceKm!),
+                              color: _proximityColor(widget.distanceKm!),
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -180,13 +213,10 @@ class ServiceCard extends StatelessWidget {
                         const Icon(Icons.location_on, size: 14, color: Colors.grey),
                         const SizedBox(width: 2),
                         Text(
-                          service.ville.isNotEmpty
-                              ? service.ville
+                          widget.service.ville.isNotEmpty
+                              ? widget.service.ville
                               : 'Localisation inconnue',
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                          ),
+                          style: const TextStyle(color: Colors.grey, fontSize: 12),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -202,7 +232,6 @@ class ServiceCard extends StatelessWidget {
     );
   }
 
-  // Image placeholder quand pas de photo ou erreur
   Widget _placeholderImage() {
     return Container(
       height: 160,
@@ -213,16 +242,12 @@ class ServiceCard extends StatelessWidget {
         children: [
           Icon(Icons.image_outlined, size: 48, color: Color(0xFF1D9E75)),
           SizedBox(height: 8),
-          Text(
-            'Pas de photo',
-            style: TextStyle(color: Colors.grey, fontSize: 12),
-          ),
+          Text('Pas de photo', style: TextStyle(color: Colors.grey, fontSize: 12)),
         ],
       ),
     );
   }
 
-  // Couleur selon la distance
   Color _proximityColor(double km) {
     if (km <= 2) return Colors.green;
     if (km <= 10) return Colors.orange;

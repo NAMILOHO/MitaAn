@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';   // ← Import ajouté
+
 import '../models/service_model.dart';
 import '../services/service_firestore.dart';
 
@@ -14,10 +16,19 @@ class ServiceProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  // === NOUVELLES VARIABLES POUR LA PAGINATION ===
+  DocumentSnapshot? _lastDocument;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
+
   List<ServiceModel> get services => _services;
   List<ServiceModel> get myServices => _myServices;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  // Getters pagination
+  bool get hasMore => _hasMore;
+  bool get isLoadingMore => _isLoadingMore;
 
   // ─────────────────────────────────────────
   // CRÉER UNE ANNONCE
@@ -28,7 +39,7 @@ class ServiceProvider extends ChangeNotifier {
     required String description,
     required String categorie,
     required double prix,
-    required String unite,       // ✅ AJOUT
+    required String unite,
     required List<File> imageFiles,
     required double gpsLat,
     required double gpsLng,
@@ -38,7 +49,6 @@ class ServiceProvider extends ChangeNotifier {
     try {
       List<String> photoUrls = [];
       if (imageFiles.isNotEmpty) {
-        // ✅ upload en parallèle via Future.wait()
         photoUrls = await _serviceFirestore.uploadServicePhotos(
           userId,
           imageFiles,
@@ -51,7 +61,7 @@ class ServiceProvider extends ChangeNotifier {
         description: description,
         categorie: categorie,
         prix: prix,
-        unite: unite,            // ✅ AJOUT
+        unite: unite,
         photos: photoUrls,
         gpsLat: gpsLat,
         gpsLng: gpsLng,
@@ -73,110 +83,34 @@ class ServiceProvider extends ChangeNotifier {
   }
 
   // ─────────────────────────────────────────
-  // METTRE À JOUR UNE ANNONCE
+  // CHARGER TOUTES LES ANNONCES (Paginée)
   // ─────────────────────────────────────────
-  Future<bool> updateService({
-    required String serviceId,
-    required String titre,
-    required String description,
-    required String categorie,
-    required double prix,
-    required String unite,
-    required List<String> existingPhotos,
-    required List<File> newImageFiles,
-    required String userId,
-  }) async {
-    _setLoading(true);
-    try {
-      // Uploader les nouvelles photos si présentes
-      List<String> newUrls = [];
-      if (newImageFiles.isNotEmpty) {
-        newUrls = await _serviceFirestore.uploadServicePhotos(
-          userId,
-          newImageFiles,
-        );
-      }
-
-      // Combiner photos existantes + nouvelles
-      final allPhotos = [...existingPhotos, ...newUrls];
-
-      await _serviceFirestore.updateService(serviceId, {
-        'titre': titre,
-        'description': description,
-        'categorie': categorie,
-        'prix': prix,
-        'unite': unite,
-        'photos': allPhotos,
-      });
-
-      // Mettre à jour les listes locales
-      _updateLocalService(serviceId, {
-        'titre': titre,
-        'description': description,
-        'categorie': categorie,
-        'prix': prix,
-        'unite': unite,
-        'photos': allPhotos,
-      });
-
-      _errorMessage = null;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _errorMessage = e.toString();
-      notifyListeners();
-      return false;
-    } finally {
-      _setLoading(false);
+  Future<void> loadAllServices({bool reset = false}) async {
+    if (reset) {
+      _services = [];
+      _lastDocument = null;
+      _hasMore = true;
     }
-  }
 
-  // ─────────────────────────────────────────
-  // ✅ TOGGLE ACTIF / INACTIF
-  // ─────────────────────────────────────────
-  Future<bool> toggleServiceActive(String serviceId, bool isActive) async {
-    try {
-      await _serviceFirestore.toggleServiceActive(serviceId, isActive);
+    if (!_hasMore) return;
+    if (_isLoadingMore) return;
 
-      // Mise à jour locale immédiate (optimistic UI)
-      _updateLocalServiceBool(serviceId, 'isActive', isActive);
+    if (_services.isEmpty) {
+      _setLoading(true);
+    } else {
+      _isLoadingMore = true;
       notifyListeners();
-      return true;
-    } catch (e) {
-      _errorMessage = e.toString();
-      notifyListeners();
-      return false;
     }
-  }
 
-  // ─────────────────────────────────────────
-  // SUPPRIMER UNE ANNONCE
-  // ─────────────────────────────────────────
-  Future<bool> deleteService(String serviceId) async {
-    _setLoading(true);
     try {
-      await _serviceFirestore.deleteService(serviceId);
-      _services.removeWhere((s) => s.id == serviceId);
-      _myServices.removeWhere((s) => s.id == serviceId);
-      _errorMessage = null;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _errorMessage = e.toString();
-      notifyListeners();
-      return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
+      final result = await _serviceFirestore.getAllServicesPaginated(
+        limit: 10,
+        startAfter: _lastDocument,
+      );
 
-  // ─────────────────────────────────────────
-  // CHARGER TOUTES LES ANNONCES
-  // ─────────────────────────────────────────
-  Future<void> loadAllServices() async {
-    _setLoading(true);
-    try {
-      _services = await _serviceFirestore.getAllServices();
+      _services.addAll(result.services);
+      _lastDocument = result.lastDoc;
+      _hasMore = result.services.length == 10;
       _errorMessage = null;
       notifyListeners();
     } catch (e) {
@@ -184,7 +118,14 @@ class ServiceProvider extends ChangeNotifier {
       notifyListeners();
     } finally {
       _setLoading(false);
+      _isLoadingMore = false;
+      notifyListeners();
     }
+  }
+
+  // Méthode pour charger la page suivante
+  Future<void> loadMoreServices() async {
+    await loadAllServices();
   }
 
   // ─────────────────────────────────────────
@@ -222,6 +163,93 @@ class ServiceProvider extends ChangeNotifier {
   }
 
   // ─────────────────────────────────────────
+  // AUTRES MÉTHODES (update, toggle, delete...)
+  // ─────────────────────────────────────────
+  Future<bool> updateService({
+    required String serviceId,
+    required String titre,
+    required String description,
+    required String categorie,
+    required double prix,
+    required String unite,
+    required List<String> existingPhotos,
+    required List<File> newImageFiles,
+    required String userId,
+  }) async {
+    _setLoading(true);
+    try {
+      List<String> newUrls = [];
+      if (newImageFiles.isNotEmpty) {
+        newUrls = await _serviceFirestore.uploadServicePhotos(
+          userId,
+          newImageFiles,
+        );
+      }
+
+      final allPhotos = [...existingPhotos, ...newUrls];
+
+      await _serviceFirestore.updateService(serviceId, {
+        'titre': titre,
+        'description': description,
+        'categorie': categorie,
+        'prix': prix,
+        'unite': unite,
+        'photos': allPhotos,
+      });
+
+      _updateLocalService(serviceId, {
+        'titre': titre,
+        'description': description,
+        'categorie': categorie,
+        'prix': prix,
+        'unite': unite,
+        'photos': allPhotos,
+      });
+
+      _errorMessage = null;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<bool> toggleServiceActive(String serviceId, bool isActive) async {
+    try {
+      await _serviceFirestore.toggleServiceActive(serviceId, isActive);
+      _updateLocalServiceBool(serviceId, 'isActive', isActive);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteService(String serviceId) async {
+    _setLoading(true);
+    try {
+      await _serviceFirestore.deleteService(serviceId);
+      _services.removeWhere((s) => s.id == serviceId);
+      _myServices.removeWhere((s) => s.id == serviceId);
+      _errorMessage = null;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // ─────────────────────────────────────────
   // HELPERS PRIVÉS
   // ─────────────────────────────────────────
   void _updateLocalService(String serviceId, Map<String, dynamic> data) {
@@ -235,9 +263,7 @@ class ServiceProvider extends ChangeNotifier {
           categorie: data['categorie'],
           prix: (data['prix'] as num?)?.toDouble(),
           unite: data['unite'],
-          photos: data['photos'] != null
-              ? List<String>.from(data['photos'])
-              : null,
+          photos: data['photos'] != null ? List<String>.from(data['photos']) : null,
         );
       }
     }
@@ -246,10 +272,8 @@ class ServiceProvider extends ChangeNotifier {
   void _updateLocalServiceBool(String serviceId, String field, bool value) {
     for (final list in [_services, _myServices]) {
       final idx = list.indexWhere((s) => s.id == serviceId);
-      if (idx != -1) {
-        if (field == 'isActive') {
-          list[idx] = list[idx].copyWith(isActive: value);
-        }
+      if (idx != -1 && field == 'isActive') {
+        list[idx] = list[idx].copyWith(isActive: value);
       }
     }
   }

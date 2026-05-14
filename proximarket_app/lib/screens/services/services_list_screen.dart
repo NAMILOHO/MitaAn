@@ -33,22 +33,21 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
   final UserService _userService = UserService();
   final TextEditingController _searchController = TextEditingController();
 
-  // Position de l'utilisateur connecté
+  // ScrollController pour la pagination infinie
+  final ScrollController _scrollController = ScrollController();
+
+  // Position de l'utilisateur
   double? _myLat;
   double? _myLng;
 
-  // Recherche avec debounce
+  // Recherche
   String _searchQuery = '';
   Timer? _debounceTimer;
 
-  // ✅ Multi-sélection de catégories
+  // Filtres
   final Set<String> _selectedCategories = {};
-
-  // ✅ Tri
   SortOption _sortOption = SortOption.distance;
-
-  // ✅ Rayon configurable
-  double _radiusKm = 50.0; // défaut large pour tout afficher au départ
+  double _radiusKm = 50.0;
   bool _showFiltersPanel = false;
 
   static const Color primaryColor = Color(0xFF1D9E75);
@@ -68,26 +67,28 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
   void initState() {
     super.initState();
     _loadData();
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _debounceTimer?.cancel();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     super.dispose();
   }
 
-  // ─────────────────────────────────────────
+  // =============================================
   // CHARGEMENT INITIAL
-  // ─────────────────────────────────────────
+  // =============================================
   Future<void> _loadData() async {
-    await context.read<ServiceProvider>().loadAllServices();
+    await context.read<ServiceProvider>().loadAllServices(reset: true);
 
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
       final user = await _userService.getUserProfile(uid);
-      if (user != null &&
-          GeoUtils.isValidCoordinate(user.gpsLat, user.gpsLng)) {
+      if (user != null && GeoUtils.isValidCoordinate(user.gpsLat, user.gpsLng)) {
         if (mounted) {
           setState(() {
             _myLat = user.gpsLat;
@@ -98,9 +99,22 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
     }
   }
 
-  // ─────────────────────────────────────────
-  // DEBOUNCE SUR LA RECHERCHE (300ms)
-  // ─────────────────────────────────────────
+  // =============================================
+  // SCROLL INFINI
+  // =============================================
+  void _onScroll() {
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 200) {
+      final provider = context.read<ServiceProvider>();
+      if (provider.hasMore && !provider.isLoadingMore) {
+        provider.loadMoreServices();
+      }
+    }
+  }
+
+  // =============================================
+  // DEBOUNCE RECHERCHE
+  // =============================================
   void _onSearchChanged(String value) {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 300), () {
@@ -108,14 +122,12 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
     });
   }
 
-  // ─────────────────────────────────────────
-  // CALCUL DE DISTANCE
-  // ─────────────────────────────────────────
+  // =============================================
+  // DISTANCE
+  // =============================================
   double? _getDistance(ServiceModel service) {
     if (_myLat == null || _myLng == null) return null;
-    if (!GeoUtils.isValidCoordinate(service.gpsLat, service.gpsLng)) {
-      return null;
-    }
+    if (!GeoUtils.isValidCoordinate(service.gpsLat, service.gpsLng)) return null;
     return GeoUtils.distanceBetween(
       _myLat!,
       _myLng!,
@@ -124,29 +136,27 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
     );
   }
 
-  // ─────────────────────────────────────────
+  // =============================================
   // FILTRAGE + TRI
-  // ─────────────────────────────────────────
+  // =============================================
   List<ServiceModel> _getFilteredAndSorted(List<ServiceModel> all) {
     List<ServiceModel> result = all;
 
-    // 1. Filtre par rayon (si position disponible)
+    // Filtre rayon
     if (_myLat != null && _myLng != null) {
       result = result.where((s) {
         final dist = _getDistance(s);
-        if (dist == null) return true; // pas de GPS sur l'annonce → inclure
+        if (dist == null) return true;
         return dist <= _radiusKm;
       }).toList();
     }
 
-    // 2. ✅ Filtre par catégories (multi-sélection)
+    // Filtre catégories
     if (_selectedCategories.isNotEmpty) {
-      result = result
-          .where((s) => _selectedCategories.contains(s.categorie))
-          .toList();
+      result = result.where((s) => _selectedCategories.contains(s.categorie)).toList();
     }
 
-    // 3. Filtre par recherche texte (insensible à la casse)
+    // Recherche texte
     if (_searchQuery.isNotEmpty) {
       result = result.where((s) {
         return s.titre.toLowerCase().contains(_searchQuery) ||
@@ -155,7 +165,6 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
             s.ville.toLowerCase().contains(_searchQuery);
       }).toList();
 
-      // ✅ Pertinence : titres qui commencent par la recherche en premier
       result.sort((a, b) {
         final aStarts = a.titre.toLowerCase().startsWith(_searchQuery);
         final bStarts = b.titre.toLowerCase().startsWith(_searchQuery);
@@ -163,10 +172,10 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
         if (!aStarts && bStarts) return 1;
         return 0;
       });
-      return result; // pas d'autre tri quand recherche active
+      return result;
     }
 
-    // 4. ✅ Tri selon l'option choisie
+    // Tri
     switch (_sortOption) {
       case SortOption.distance:
         result.sort((a, b) {
@@ -185,13 +194,9 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
           return db.compareTo(da);
         });
     }
-
     return result;
   }
 
-  // ─────────────────────────────────────────
-  // RÉINITIALISER LES FILTRES
-  // ─────────────────────────────────────────
   void _resetFilters() {
     setState(() {
       _searchController.clear();
@@ -208,9 +213,9 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
       _sortOption != SortOption.distance ||
       _radiusKm < 50.0;
 
-  // ─────────────────────────────────────────
+  // =============================================
   // BUILD
-  // ─────────────────────────────────────────
+  // =============================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -219,102 +224,60 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
         backgroundColor: primaryColor,
         automaticallyImplyLeading: false,
         elevation: 0,
-        title: const Text(
-          'Annonces',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Annonces', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
-          // Bouton filtre avancé
           IconButton(
             icon: Stack(
               children: [
-                Icon(
-                  Icons.tune,
-                  color: _hasActiveFilters ? Colors.amber : Colors.white,
-                ),
+                Icon(Icons.tune, color: _hasActiveFilters ? Colors.amber : Colors.white),
                 if (_hasActiveFilters)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.amber,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
+                  Positioned(right: 0, top: 0, child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.amber, shape: BoxShape.circle))),
               ],
             ),
-            tooltip: 'Filtres avancés',
-            onPressed: () =>
-                setState(() => _showFiltersPanel = !_showFiltersPanel),
+            onPressed: () => setState(() => _showFiltersPanel = !_showFiltersPanel),
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _loadData,
-          ),
+          IconButton(icon: const Icon(Icons.refresh, color: Colors.white), onPressed: _loadData),
         ],
       ),
       body: Column(
         children: [
-          // ── Barre de recherche ──
+          // Barre de recherche
           Container(
             color: primaryColor,
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: TextField(
               controller: _searchController,
-              onChanged: _onSearchChanged, // ✅ debounce appliqué ici
+              onChanged: _onSearchChanged,
               decoration: InputDecoration(
                 hintText: 'Rechercher un service, une ville...',
                 hintStyle: const TextStyle(color: Colors.grey),
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
                 suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.close, color: Colors.grey),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      )
+                    ? IconButton(icon: const Icon(Icons.close, color: Colors.grey), onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      })
                     : null,
                 filled: true,
                 fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
             ),
           ),
 
-          // ── Panneau filtres avancés ──
           if (_showFiltersPanel) _buildFiltersPanel(),
-
-          // ── Chips de catégories (multi-sélection) ──
           _buildCategoryChips(),
-
-          // ── Tri ──
           _buildSortBar(),
 
-          // ── Liste des annonces ──
+          // Liste des annonces avec pagination infinie
           Expanded(
             child: Consumer<ServiceProvider>(
               builder: (context, provider, _) {
-                if (provider.isLoading) {
-                  return const Center(
-                    child:
-                        CircularProgressIndicator(color: primaryColor),
-                  );
+                if (provider.isLoading && provider.services.isEmpty) {
+                  return const Center(child: CircularProgressIndicator(color: primaryColor));
                 }
 
-                final filtered =
-                    _getFilteredAndSorted(provider.services);
+                final filtered = _getFilteredAndSorted(provider.services);
 
                 if (filtered.isEmpty) {
                   return _buildEmptyState(provider.services.isEmpty);
@@ -322,11 +285,34 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
 
                 return RefreshIndicator(
                   color: primaryColor,
-                  onRefresh: _loadData,
+                  onRefresh: () => context.read<ServiceProvider>().loadAllServices(reset: true),
                   child: ListView.builder(
+                    controller: _scrollController,
                     padding: const EdgeInsets.all(16),
-                    itemCount: filtered.length,
+                    itemCount: filtered.length + 1,
                     itemBuilder: (context, index) {
+                      if (index == filtered.length) {
+                        return Consumer<ServiceProvider>(
+                          builder: (_, provider, __) {
+                            if (provider.isLoadingMore) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Center(child: CircularProgressIndicator(color: primaryColor)),
+                              );
+                            }
+                            if (!provider.hasMore) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Center(
+                                  child: Text('Toutes les annonces sont affichées', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        );
+                      }
+
                       final service = filtered[index];
                       return _buildServiceTile(service);
                     },

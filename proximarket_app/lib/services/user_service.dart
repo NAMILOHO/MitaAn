@@ -79,7 +79,7 @@ class UserService {
   }
 
   // =============================================
-  // NOUVELLES MÉTHODES : FAVORIS
+  // MÉTHODES FAVORIS
   // =============================================
 
   Future<void> addFavorite(String uid, String serviceId) async {
@@ -95,7 +95,11 @@ class UserService {
   }
 
   Future<List<String>> getFavorites(String uid) async {
-    final doc = await _firestore.collection('users').doc(uid).get();
-    return List<String>.from(doc.data()?['favorites'] ?? []);
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      return List<String>.from(doc.data()?['favorites'] ?? []);
+    } catch (_) {
+      return [];
+    }
   }
 }

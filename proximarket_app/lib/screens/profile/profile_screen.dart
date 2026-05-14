@@ -9,7 +9,7 @@ import '../../services/user_service.dart';
 import '../../providers/auth_provider.dart' as app_auth;
 import 'edit_profile_screen.dart';
 import '../services/my_services_screen.dart';
-import 'favorites_screen.dart';           // ← Import ajouté
+import 'favorites_screen.dart';
 import '../auth/login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -126,6 +126,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // Méthode corrigée et complète
   Widget _photoOption(IconData icon, String label, ImageSource source) {
     return GestureDetector(
       onTap: () {
@@ -142,7 +143,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 13,
+            ),
           ),
         ],
       ),
@@ -344,7 +348,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 12),
 
-            // === Bouton Mes favoris (NOUVEAU) ===
+            // Bouton Mes favoris
             SizedBox(
               width: double.infinity,
               height: 52,

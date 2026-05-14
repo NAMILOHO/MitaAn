@@ -276,7 +276,11 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                                     child: _owner!.photoUrl.isEmpty
                                         ? Text(
                                             _owner!.nom.isNotEmpty ? _owner!.nom[0].toUpperCase() : '?',
-                                            style: const TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 20),
+                                            style: const TextStyle(
+                                              color: primaryColor,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 20,
+                                            ),
                                           )
                                         : null,
                                   ),
@@ -285,7 +289,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        // Nom cliquable
+                                        // Nom cliquable avec style souligné
                                         GestureDetector(
                                           onTap: () => Navigator.push(
                                             context,
@@ -300,6 +304,8 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                                             style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 15,
+                                              decoration: TextDecoration.underline,
+                                              color: Color(0xFF1D9E75),
                                             ),
                                           ),
                                         ),
