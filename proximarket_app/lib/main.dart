@@ -1,6 +1,9 @@
+import 'dart:async'; // ← Ajouté pour runZonedGuarded
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';     // Pour Settings
+import 'package:firebase_crashlytics/firebase_crashlytics.dart'; // ← Ajouté
 import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
@@ -12,18 +15,37 @@ import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/splash_screen.dart';
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // 1. Initialiser Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  
-  // 2. Initialiser les notifications
+
+  // 2. Persistence offline Firestore
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
+
+  // 3. Configuration Crashlytics
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+
+  // 4. Initialiser les notifications
   await NotificationService().initialize();
-  
-  runApp(const MyApp());
+
+  // 5. Lancer l'application avec gestion des erreurs
+  runZonedGuarded(
+    () => runApp(const MyApp()),
+    (error, stack) => FirebaseCrashlytics.instance.recordError(
+      error,
+      stack,
+      fatal: true,
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -37,8 +59,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ServiceProvider()),
       ],
       child: MaterialApp(
+        navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
-        title: 'MitaAn',
+        title: 'ProxiMarket',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF1D9E75),
@@ -51,7 +74,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// ====================== AUTH WRAPPER MIS À JOUR ======================
+// ====================== AUTH WRAPPER ======================
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
@@ -71,7 +94,7 @@ class AuthWrapper extends StatelessWidget {
         }
 
         if (snapshot.hasData) {
-          // Sauvegarder token FCM dès que l'utilisateur est connecté
+          // Sauvegarder token FCM dès connexion
           WidgetsBinding.instance.addPostFrameCallback((_) {
             NotificationService().saveTokenToFirestore(
               snapshot.data!.uid,
@@ -85,4 +108,3 @@ class AuthWrapper extends StatelessWidget {
     );
   }
 }
-// =====================================================================

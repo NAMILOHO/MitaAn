@@ -5,9 +5,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../models/service_model.dart';
 import '../../models/user_model.dart';
 import '../../services/user_service.dart';
+import '../../services/history_service.dart';        // ← Import ajouté
 import '../../utils/distance_helper.dart';
 import '../chat/chat_screen.dart';
-import '../profile/public_profile_screen.dart'; // ← Import ajouté
+import '../profile/public_profile_screen.dart';
 
 class ServiceDetailScreen extends StatefulWidget {
   final ServiceModel service;
@@ -35,14 +36,20 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   void initState() {
     super.initState();
     _loadOwner();
+
+    // ====================== Ajout historique ======================
+    HistoryService().addToHistory(widget.service.id);
+    // ===============================================================
   }
 
   Future<void> _loadOwner() async {
     final owner = await _userService.getUserProfile(widget.service.userId);
-    setState(() {
-      _owner = owner;
-      _isLoadingOwner = false;
-    });
+    if (mounted) {
+      setState(() {
+        _owner = owner;
+        _isLoadingOwner = false;
+      });
+    }
   }
 
   // ====================== Appeler & WhatsApp ======================
@@ -56,6 +63,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       );
       return;
     }
+
     final uri = Uri(scheme: 'tel', path: _owner!.phone);
     try {
       await launchUrl(uri);
@@ -92,7 +100,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     }
 
     final message = Uri.encodeComponent(
-      'Bonjour, je vous contacte via MitaAn concernant votre annonce : ${widget.service.titre}',
+      'Bonjour, je vous contacte via ProxiMarket concernant votre annonce : ${widget.service.titre}',
     );
 
     final uri = Uri.parse('https://wa.me/$phone?text=$message');
@@ -122,7 +130,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       backgroundColor: const Color(0xFFF5F5F5),
       body: CustomScrollView(
         slivers: [
-          // AppBar avec photos
+          // AppBar avec photos (inchangé)
           SliverAppBar(
             expandedHeight: 280,
             pinned: true,
@@ -168,7 +176,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             ),
           ),
 
-          // Contenu principal
+          // Contenu principal (inchangé)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -258,7 +266,11 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2)),
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
                       ],
                     ),
                     child: _isLoadingOwner
@@ -289,7 +301,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        // Nom cliquable avec style souligné
                                         GestureDetector(
                                           onTap: () => Navigator.push(
                                             context,
@@ -338,6 +349,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     );
   }
 
+  // Méthodes _myServiceBar, _contactBar et _placeholder restent identiques
   Widget _myServiceBar() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -403,7 +415,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       )
                   : null,
               icon: const Icon(Icons.message_outlined, color: Colors.white),
-              label: const Text('Messagerie MitaAn', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              label: const Text('Messagerie ProxiMarket', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 padding: const EdgeInsets.symmetric(vertical: 12),

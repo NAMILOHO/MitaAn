@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // ← Ajouté
 
 import '../../models/user_model.dart';
 import '../../models/service_model.dart';
@@ -10,7 +11,6 @@ import '../chat/chat_screen.dart';
 
 class PublicProfileScreen extends StatefulWidget {
   final String userId;
-
   const PublicProfileScreen({super.key, required this.userId});
 
   @override
@@ -87,7 +87,15 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       },
     );
 
+    // ====================== VERSION MISE À JOUR ======================
     if (raison != null && mounted) {
+      await FirebaseFirestore.instance.collection('reports').add({
+        'reporterId': FirebaseAuth.instance.currentUser?.uid,
+        'targetId': widget.userId,
+        'raison': raison,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Profil signalé. Merci.'),
@@ -95,6 +103,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         ),
       );
     }
+    // =================================================================
   }
 
   @override
@@ -138,7 +147,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // ── En-tête profil ──
+            // En-tête profil (inchangé)
             Container(
               width: double.infinity,
               color: primaryColor,
@@ -217,7 +226,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
               ),
             ),
 
-            // ── Stats ──
+            // Stats
             Container(
               color: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -229,7 +238,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
               ),
             ),
 
-            // ── Bio ──
+            // Bio
             if (_user!.bio.isNotEmpty)
               Container(
                 width: double.infinity,
@@ -257,7 +266,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 ),
               ),
 
-            // ── Bouton contacter ──
+            // Bouton contacter
             if (!isMe)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -284,7 +293,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 ),
               ),
 
-            // ── Annonces ──
+            // Annonces
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
               child: Row(
@@ -337,6 +346,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     );
   }
 
+  // Méthodes restantes inchangées
   Widget _statItem(String value, String label) {
     return Column(
       children: [

@@ -3,7 +3,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+
 import '../firebase_options.dart';
+import '../main.dart'; // ← Import ajouté pour navigatorKey
 
 // ─────────────────────────────────────────
 // HANDLER BACKGROUND — doit être top-level
@@ -45,10 +47,13 @@ class NotificationService {
     // 1. Enregistrer handler background
     FirebaseMessaging.onBackgroundMessage(
         firebaseMessagingBackgroundHandler);
+
     // 2. Demander permission
     await _requestPermission();
+
     // 3. Config notifications locales
     await _setupLocalNotifications();
+
     // 4. Écouter messages foreground
     _listenForeground();
   }
@@ -86,7 +91,6 @@ class NotificationService {
     final androidPlugin = _localNotifications
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
-
     await androidPlugin?.createNotificationChannel(_channel);
   }
 
@@ -98,7 +102,7 @@ class NotificationService {
       final notification = message.notification;
       if (notification != null) {
         _showLocalNotification(
-          title: notification.title ?? 'MitaAn',
+          title: notification.title ?? 'ProxiMarket',
           body: notification.body ?? '',
           payload: message.data['chatId'] ?? '',
         );
@@ -106,11 +110,9 @@ class NotificationService {
     });
 
     // ====================== VERSION MISE À JOUR ======================
-    // Nécessite un GlobalKey<NavigatorState> passé depuis main.dart
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       debugPrint('🔔 Notification cliquée: ${message.data}');
-      final chatId = message.data['chatId'];
-      // Navigation gérée via navigatorKey si disponible
+      navigatorKey.currentState?.pushNamed('/chat', arguments: message.data);
     });
     // =================================================================
   }

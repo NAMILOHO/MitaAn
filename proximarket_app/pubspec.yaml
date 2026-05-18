@@ -48,6 +48,10 @@ dependencies:
   latlong2: ^0.9.1
   http: ^1.6.0
   shared_preferences: ^2.3.2
+  flutter_launcher_icons: ^0.13.0
+  flutter_native_splash: ^2.3.0
+  firebase_crashlytics: ^4.0.0
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -64,7 +68,6 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
@@ -101,3 +104,18 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
+  # === Configuration des assets ===
+  assets:
+    - assets/images/
+    
+# === Configuration des icônes de l'application ===
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logo.png"
+
+# === Configuration du Splash Screen ===
+flutter_native_splash:
+  color: "#1D9E75"
+  android: true
+  ios: true
