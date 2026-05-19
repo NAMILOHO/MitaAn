@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import '../services/auth_service.dart';
+import '../models/user_model.dart';
 
 class AuthProvider extends ChangeNotifier {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final AuthService _authService = AuthService();
 
+  UserModel? _userModel;
+  bool _isLoading = false;
   String? errorMessage;
-  User? user;
 
-  AuthProvider() {
-    _auth.authStateChanges().listen((User? u) {
-      user = u;
-      notifyListeners();
-    });
-  }
+  // Getters
+  UserModel? get userModel => _userModel;
+  bool get isLoading => _isLoading;
+  bool get isLoggedIn => FirebaseAuth.instance.currentUser != null;
 
-  // 🔥 SIGN UP
+  // ─────────────────────────────────────────
+  // INSCRIPTION
+  // ─────────────────────────────────────────
   Future<bool> signUp({
     required String email,
     required String password,
@@ -23,62 +27,100 @@ class AuthProvider extends ChangeNotifier {
     required bool isPro,
     required String categorie,
   }) async {
+    _setLoading(true);
     try {
       errorMessage = null;
-
-      await _auth.createUserWithEmailAndPassword(
+      _userModel = await _authService.signUp(
         email: email,
         password: password,
+        nom: nom,
+        phone: phone,
+        isPro: isPro,
+        categorie: categorie,
       );
-
+      notifyListeners();
       return true;
-    } on FirebaseAuthException catch (e) {
-      errorMessage = e.message;
-      return false;
     } catch (e) {
       errorMessage = e.toString();
+      notifyListeners();
       return false;
+    } finally {
+      _setLoading(false);
     }
   }
 
-  // 🔥 SIGN IN
+  // ─────────────────────────────────────────
+  // CONNEXION EMAIL
+  // ─────────────────────────────────────────
   Future<bool> signIn({
     required String email,
     required String password,
   }) async {
+    _setLoading(true);
     try {
       errorMessage = null;
-
-      await _auth.signInWithEmailAndPassword(
+      _userModel = await _authService.signIn(
         email: email,
         password: password,
       );
-
+      notifyListeners();
       return true;
-    } on FirebaseAuthException catch (e) {
-      errorMessage = e.message;
-      return false;
     } catch (e) {
       errorMessage = e.toString();
+      notifyListeners();
       return false;
+    } finally {
+      _setLoading(false);
     }
   }
 
-  // 🔥 GOOGLE (placeholder si pas encore activé)
+  // ─────────────────────────────────────────
+  // CONNEXION GOOGLE
+  // ─────────────────────────────────────────
   Future<bool> signInWithGoogle() async {
+    _setLoading(true);
     try {
       errorMessage = null;
 
-      // TODO: ajouter google_sign_in plus tard
-      return true;
+      if (kIsWeb) {
+        // Sur Web → popup Firebase
+        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+        googleProvider.addScope('email');
+        googleProvider.addScope('profile');
+        await FirebaseAuth.instance.signInWithPopup(googleProvider);
+        _userModel = null; // sera chargé par le stream
+        notifyListeners();
+        return true;
+      } else {
+        // Sur Mobile → google_sign_in
+        _userModel = await _authService.signInWithGoogle();
+        notifyListeners();
+        return _userModel != null;
+      }
     } catch (e) {
-      errorMessage = e.toString();
+      errorMessage = 'Erreur Google : ${e.toString()}';
+      notifyListeners();
       return false;
+    } finally {
+      _setLoading(false);
     }
   }
 
-  // 🔥 LOGOUT
+  // ─────────────────────────────────────────
+  // DÉCONNEXION
+  // ─────────────────────────────────────────
   Future<void> signOut() async {
-    await _auth.signOut();
+    try {
+      await _authService.signOut();
+      _userModel = null;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Erreur déconnexion: $e');
+    }
+  }
+
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
   }
 }

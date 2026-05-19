@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.proximarket_app">
 
@@ -11,19 +12,59 @@
 
     <!-- Android 13+ -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+=======
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Permissions -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/> <!-- Optionnel mais utile pour FCM -->
+>>>>>>> develop
 
     <application
-        android:label="proximarket_app"
+        android:label="MitaAn"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
+<<<<<<< HEAD
         android:enableOnBackInvokedCallback="true">
 
         <!-- Activity principale -->
+=======
+        android:usesCleartextTraffic="true">  <!-- Utile en dev -->
+
+        <!-- Firebase Cloud Messaging -->
+        <service
+            android:name="com.google.firebase.messaging.FirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+            </intent-filter>
+        </service>
+
+        <!-- Notification configuration -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher"/>
+        
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_color"/>
+        
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="MitaAn_channel"/>
+
+>>>>>>> develop
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
-            android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
@@ -32,13 +73,18 @@
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme"/>
+<<<<<<< HEAD
 
+=======
+            
+>>>>>>> develop
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
 
+<<<<<<< HEAD
         <!-- Flutter embedding -->
         <meta-data
             android:name="flutterEmbedding"
@@ -47,11 +93,21 @@
     </application>
 
     <!-- ✅ UNE SEULE BALISE QUERIES -->
+=======
+        <!-- Flutter Embedding -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+
+    <!-- Queries pour les liens (ex: WhatsApp, téléphone) -->
+>>>>>>> develop
     <queries>
         <!-- Web / liens -->
         <intent>
             <action android:name="android.intent.action.VIEW"/>
         </intent>
+<<<<<<< HEAD
 
         <!-- Appel téléphone -->
         <intent>
@@ -66,6 +122,12 @@
         <!-- WhatsApp -->
         <package android:name="com.whatsapp"/>
         <package android:name="com.whatsapp.w4b"/>
+=======
+        <intent>
+            <action android:name="android.intent.action.DIAL"/>
+            <data android:scheme="tel"/>
+        </intent>
+>>>>>>> develop
     </queries>
 
 </manifest>

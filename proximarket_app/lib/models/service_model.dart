@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+>>>>>>> develop
 class ServiceModel {
   final String id;
   final String userId;
@@ -5,6 +10,10 @@ class ServiceModel {
   final String description;
   final String categorie;
   final double prix;
+<<<<<<< HEAD
+=======
+  final String unite;        // ✅ AJOUT : par heure / par jour / forfait
+>>>>>>> develop
   final List<String> photos;
   final double gpsLat;
   final double gpsLng;
@@ -19,6 +28,10 @@ class ServiceModel {
     required this.description,
     required this.categorie,
     required this.prix,
+<<<<<<< HEAD
+=======
+    this.unite = 'forfait',   // ✅ valeur par défaut
+>>>>>>> develop
     this.photos = const [],
     this.gpsLat = 0.0,
     this.gpsLng = 0.0,
@@ -36,12 +49,22 @@ class ServiceModel {
       description: map['description'] ?? '',
       categorie: map['categorie'] ?? '',
       prix: (map['prix'] ?? 0.0).toDouble(),
+<<<<<<< HEAD
+=======
+      unite: map['unite'] ?? 'forfait', // ✅ rétrocompatible si absent
+>>>>>>> develop
       photos: List<String>.from(map['photos'] ?? []),
       gpsLat: (map['gpsLat'] ?? 0.0).toDouble(),
       gpsLng: (map['gpsLng'] ?? 0.0).toDouble(),
       ville: map['ville'] ?? '',
       isActive: map['isActive'] ?? true,
+<<<<<<< HEAD
       createdAt: map['createdAt']?.toDate(),
+=======
+      createdAt: map['createdAt'] is Timestamp
+          ? (map['createdAt'] as Timestamp).toDate()
+          : map['createdAt']?.toDate(),
+>>>>>>> develop
     );
   }
 
@@ -53,12 +76,52 @@ class ServiceModel {
       'description': description,
       'categorie': categorie,
       'prix': prix,
+<<<<<<< HEAD
+=======
+      'unite': unite,         // ✅ inclus dans la sérialisation
+>>>>>>> develop
       'photos': photos,
       'gpsLat': gpsLat,
       'gpsLng': gpsLng,
       'ville': ville,
       'isActive': isActive,
+<<<<<<< HEAD
       'createdAt': createdAt,
     };
   }
+=======
+      if (createdAt != null) 'createdAt': createdAt,
+    };
+  }
+
+  // ✅ copyWith pour la mise à jour partielle (utilisé dans EditServiceScreen)
+  ServiceModel copyWith({
+    String? titre,
+    String? description,
+    String? categorie,
+    double? prix,
+    String? unite,
+    List<String>? photos,
+    double? gpsLat,
+    double? gpsLng,
+    String? ville,
+    bool? isActive,
+  }) {
+    return ServiceModel(
+      id: id,
+      userId: userId,
+      titre: titre ?? this.titre,
+      description: description ?? this.description,
+      categorie: categorie ?? this.categorie,
+      prix: prix ?? this.prix,
+      unite: unite ?? this.unite,
+      photos: photos ?? this.photos,
+      gpsLat: gpsLat ?? this.gpsLat,
+      gpsLng: gpsLng ?? this.gpsLng,
+      ville: ville ?? this.ville,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt,
+    );
+  }
+>>>>>>> develop
 }

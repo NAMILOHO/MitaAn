@@ -7,6 +7,7 @@ class UserModel {
   final String bio;
   final double gpsLat;
   final double gpsLng;
+  final String ville;        // ← AJOUTÉ
   final bool isPro;
   final String categorie;
   final String photoUrl;
@@ -22,6 +23,7 @@ class UserModel {
     this.bio = '',
     this.gpsLat = 0.0,
     this.gpsLng = 0.0,
+    this.ville = '',          // ← AJOUTÉ
     this.isPro = false,
     this.categorie = '',
     this.photoUrl = '',
@@ -29,7 +31,10 @@ class UserModel {
     this.createdAt,
   });
 
+<<<<<<< HEAD
   // 🔥 Firestore → UserModel
+=======
+>>>>>>> develop
   factory UserModel.fromMap(Map<String, dynamic> map, String uid) {
     return UserModel(
       uid: uid,
@@ -38,12 +43,18 @@ class UserModel {
       phone: map['phone'] ?? '',
       ville: map['ville'] ?? '', // ✅ CORRECTION IMPORTANTE
       bio: map['bio'] ?? '',
+<<<<<<< HEAD
       gpsLat: (map['gpsLat'] is num)
           ? (map['gpsLat'] as num).toDouble()
           : 0.0,
       gpsLng: (map['gpsLng'] is num)
           ? (map['gpsLng'] as num).toDouble()
           : 0.0,
+=======
+      gpsLat: (map['gpsLat'] ?? 0.0).toDouble(),
+      gpsLng: (map['gpsLng'] ?? 0.0).toDouble(),
+      ville: map['ville'] ?? '',    // ← AJOUTÉ
+>>>>>>> develop
       isPro: map['isPro'] ?? false,
       categorie: map['categorie'] ?? '',
       photoUrl: map['photoUrl'] ?? '',
@@ -54,7 +65,10 @@ class UserModel {
     );
   }
 
+<<<<<<< HEAD
   // 🔥 UserModel → Firestore
+=======
+>>>>>>> develop
   Map<String, dynamic> toMap() {
     return {
       'nom': nom,
@@ -64,6 +78,7 @@ class UserModel {
       'bio': bio,
       'gpsLat': gpsLat,
       'gpsLng': gpsLng,
+      'ville': ville,           // ← AJOUTÉ
       'isPro': isPro,
       'categorie': categorie,
       'photoUrl': photoUrl,
