@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import '../../models/service_model.dart';
 import '../../services/user_service.dart';
 import '../../services/service_firestore.dart';
@@ -32,16 +31,23 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   Future<void> _loadFavorites() async {
     setState(() => _isLoading = true);
-
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid == null) return;
+      if (uid == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
 
       final ids = await _userService.getFavorites(uid);
       _favoriteIds = ids;
 
       if (ids.isEmpty) {
-        if (mounted) setState(() { _favoriteServices = []; _isLoading = false; });
+        if (mounted) {
+          setState(() {
+            _favoriteServices = [];
+            _isLoading = false;
+          });
+        }
         return;
       }
 
@@ -52,8 +58,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
       if (mounted) {
         setState(() {
-          _favoriteServices =
-              services.whereType<ServiceModel>().toList();
+          _favoriteServices = services.whereType<ServiceModel>().toList();
           _isLoading = false;
         });
       }
@@ -127,7 +132,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             builder: (_) => ServiceDetailScreen(service: service),
           ),
         );
-        _loadFavorites(); // Rafraîchir après retour (l'utilisateur peut avoir retiré)
+        _loadFavorites(); // Rafraîchir après retour
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -136,7 +141,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06), // ← Corrigé
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -180,7 +185,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: primaryColor.withOpacity(0.1),
+                        color: primaryColor.withValues(alpha: 0.1), // ← Corrigé
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(

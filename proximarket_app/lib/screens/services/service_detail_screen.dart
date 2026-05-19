@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/service_model.dart';
 import '../../models/user_model.dart';
 import '../../services/user_service.dart';
-import '../../services/history_service.dart';        // ← Import ajouté
+import '../../services/history_service.dart';
 import '../../utils/distance_helper.dart';
 import '../chat/chat_screen.dart';
 import '../profile/public_profile_screen.dart';
@@ -36,10 +37,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   void initState() {
     super.initState();
     _loadOwner();
-
-    // ====================== Ajout historique ======================
     HistoryService().addToHistory(widget.service.id);
-    // ===============================================================
   }
 
   Future<void> _loadOwner() async {
@@ -52,71 +50,52 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     }
   }
 
-  // ====================== Appeler & WhatsApp ======================
   Future<void> _callOwner() async {
     if (_owner == null || _owner!.phone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Numéro de téléphone non disponible'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      _showSnack('Numéro de téléphone non disponible', Colors.orange);
       return;
     }
-
+    HapticFeedback.lightImpact();
     final uri = Uri(scheme: 'tel', path: _owner!.phone);
     try {
       await launchUrl(uri);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Impossible de passer l\'appel'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    } catch (_) {
+      _showSnack("Impossible de passer l'appel", Colors.red);
     }
   }
 
   Future<void> _whatsappOwner() async {
     if (_owner == null || _owner!.phone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Numéro de téléphone non disponible'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      _showSnack('Numéro de téléphone non disponible', Colors.orange);
       return;
     }
+    HapticFeedback.lightImpact();
 
     String phone = _owner!.phone
         .replaceAll(' ', '')
         .replaceAll('-', '')
         .replaceAll('+', '');
-
     if (!phone.startsWith('225') && phone.length <= 10) {
       phone = '225$phone';
     }
 
+    // ✅ CORRECTION : branding MitaAn (était ProxiMarket)
     final message = Uri.encodeComponent(
-      'Bonjour, je vous contacte via ProxiMarket concernant votre annonce : ${widget.service.titre}',
+      'Bonjour, je vous contacte via MitaAn concernant votre annonce : ${widget.service.titre}',
     );
-
     final uri = Uri.parse('https://wa.me/$phone?text=$message');
-
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('WhatsApp n\'est pas installé'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    } catch (_) {
+      _showSnack("WhatsApp n'est pas installé", Colors.red);
     }
+  }
+
+  void _showSnack(String msg, Color color) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: color),
+    );
   }
 
   bool get _isMyService {
@@ -130,7 +109,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       backgroundColor: const Color(0xFFF5F5F5),
       body: CustomScrollView(
         slivers: [
-          // AppBar avec photos (inchangé)
           SliverAppBar(
             expandedHeight: 280,
             pinned: true,
@@ -142,11 +120,12 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       children: [
                         PageView.builder(
                           itemCount: widget.service.photos.length,
-                          onPageChanged: (i) => setState(() => _photoIndex = i),
+                          onPageChanged: (i) =>
+                              setState(() => _photoIndex = i),
                           itemBuilder: (_, i) => Image.network(
                             widget.service.photos[i],
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => _placeholder(),
+                            errorBuilder: (_, __, ___) => _placeholder(),
                           ),
                         ),
                         if (widget.service.photos.length > 1)
@@ -161,9 +140,12 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                                 (i) => Container(
                                   width: i == _photoIndex ? 20 : 8,
                                   height: 8,
-                                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 3),
                                   decoration: BoxDecoration(
-                                    color: i == _photoIndex ? Colors.white : Colors.white54,
+                                    color: i == _photoIndex
+                                        ? Colors.white
+                                        : Colors.white54,
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                 ),
@@ -175,27 +157,26 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   : _placeholder(),
             ),
           ),
-
-          // Contenu principal (inchangé)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Titre + Catégorie
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: Text(
                           widget.service.titre,
-                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.bold),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: primaryColor.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
@@ -213,11 +194,11 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Prix + Distance
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
                           color: primaryColor,
                           borderRadius: BorderRadius.circular(10),
@@ -235,30 +216,38 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       ),
                       const SizedBox(width: 12),
                       if (widget.distanceKm != null) ...[
-                        const Icon(Icons.location_on, color: Colors.grey, size: 16),
+                        const Icon(Icons.location_on,
+                            color: Colors.grey, size: 16),
                         const SizedBox(width: 4),
                         Text(DistanceHelper.format(widget.distanceKm!),
                             style: const TextStyle(color: Colors.grey)),
                       ] else if (widget.service.ville.isNotEmpty) ...[
-                        const Icon(Icons.location_on, color: Colors.grey, size: 16),
+                        const Icon(Icons.location_on,
+                            color: Colors.grey, size: 16),
                         const SizedBox(width: 4),
-                        Text(widget.service.ville, style: const TextStyle(color: Colors.grey)),
+                        Text(widget.service.ville,
+                            style: const TextStyle(color: Colors.grey)),
                       ],
                     ],
                   ),
                   const SizedBox(height: 20),
 
-                  // Description
-                  const Text('Description', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                  const Text('Description',
+                      style: TextStyle(
+                          fontSize: 17, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Text(
                     widget.service.description,
-                    style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.6),
+                    style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                        height: 1.6),
                   ),
                   const SizedBox(height: 20),
 
-                  // Profil du prestataire
-                  const Text('Le prestataire', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                  const Text('Le prestataire',
+                      style: TextStyle(
+                          fontSize: 17, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
                   Container(
                     padding: const EdgeInsets.all(14),
@@ -274,20 +263,27 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       ],
                     ),
                     child: _isLoadingOwner
-                        ? const Center(child: CircularProgressIndicator(color: primaryColor))
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                                color: primaryColor))
                         : _owner == null
                             ? const Text('Profil indisponible')
                             : Row(
                                 children: [
                                   CircleAvatar(
                                     radius: 28,
-                                    backgroundColor: const Color(0xFFE0F2EE),
-                                    backgroundImage: _owner!.photoUrl.isNotEmpty
-                                        ? NetworkImage(_owner!.photoUrl)
-                                        : null,
+                                    backgroundColor:
+                                        const Color(0xFFE0F2EE),
+                                    backgroundImage:
+                                        _owner!.photoUrl.isNotEmpty
+                                            ? NetworkImage(_owner!.photoUrl)
+                                            : null,
                                     child: _owner!.photoUrl.isEmpty
                                         ? Text(
-                                            _owner!.nom.isNotEmpty ? _owner!.nom[0].toUpperCase() : '?',
+                                            _owner!.nom.isNotEmpty
+                                                ? _owner!.nom[0]
+                                                    .toUpperCase()
+                                                : '?',
                                             style: const TextStyle(
                                               color: primaryColor,
                                               fontWeight: FontWeight.bold,
@@ -299,14 +295,17 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         GestureDetector(
                                           onTap: () => Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) => PublicProfileScreen(
-                                                userId: widget.service.userId,
+                                              builder: (_) =>
+                                                  PublicProfileScreen(
+                                                userId:
+                                                    widget.service.userId,
                                               ),
                                             ),
                                           ),
@@ -315,20 +314,23 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                                             style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 15,
-                                              decoration: TextDecoration.underline,
+                                              decoration:
+                                                  TextDecoration.underline,
                                               color: Color(0xFF1D9E75),
                                             ),
                                           ),
                                         ),
                                         if (_owner!.isPro)
-                                          Text(
-                                            _owner!.categorie,
-                                            style: const TextStyle(color: primaryColor, fontSize: 12),
-                                          ),
+                                          Text(_owner!.categorie,
+                                              style: const TextStyle(
+                                                  color: primaryColor,
+                                                  fontSize: 12)),
                                         if (_owner!.bio.isNotEmpty)
                                           Text(
                                             _owner!.bio,
-                                            style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                            style: const TextStyle(
+                                                color: Colors.grey,
+                                                fontSize: 12),
                                             maxLines: 2,
                                             overflow: TextOverflow.ellipsis,
                                           ),
@@ -345,11 +347,11 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: _isMyService ? _myServiceBar() : _contactBar(),
+      bottomNavigationBar:
+          _isMyService ? _myServiceBar() : _contactBar(),
     );
   }
 
-  // Méthodes _myServiceBar, _contactBar et _placeholder restent identiques
   Widget _myServiceBar() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -358,10 +360,13 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         children: [
           const Icon(Icons.info_outline, color: Colors.grey),
           const SizedBox(width: 8),
-          const Expanded(child: Text('C\'est votre annonce', style: TextStyle(color: Colors.grey))),
+          const Expanded(
+              child: Text("C'est votre annonce",
+                  style: TextStyle(color: Colors.grey))),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Retour', style: TextStyle(color: primaryColor)),
+            child: const Text('Retour',
+                style: TextStyle(color: primaryColor)),
           ),
         ],
       ),
@@ -381,11 +386,15 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                 child: OutlinedButton.icon(
                   onPressed: _callOwner,
                   icon: const Icon(Icons.phone, color: primaryColor),
-                  label: const Text('Appeler', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
+                  label: const Text('Appeler',
+                      style: TextStyle(
+                          color: primaryColor,
+                          fontWeight: FontWeight.bold)),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     side: const BorderSide(color: primaryColor),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
@@ -394,11 +403,15 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                 child: ElevatedButton.icon(
                   onPressed: _whatsappOwner,
                   icon: const Icon(Icons.chat, color: Colors.white),
-                  label: const Text('WhatsApp', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  label: const Text('WhatsApp',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF25D366),
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
@@ -409,17 +422,26 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _owner != null
-                  ? () => Navigator.push(
+                  ? () {
+                      HapticFeedback.lightImpact();
+                      Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => ChatScreen(otherUser: _owner!)),
-                      )
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                ChatScreen(otherUser: _owner!)),
+                      );
+                    }
                   : null,
               icon: const Icon(Icons.message_outlined, color: Colors.white),
-              label: const Text('Messagerie ProxiMarket', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              // ✅ CORRECTION : "MitaAn" au lieu de "ProxiMarket"
+              label: const Text('Messagerie MitaAn',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ),
@@ -431,7 +453,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   Widget _placeholder() {
     return Container(
       color: const Color(0xFFE8F5F0),
-      child: const Center(child: Icon(Icons.image_outlined, size: 64, color: Color(0xFF1D9E75))),
+      child: const Center(
+          child: Icon(Icons.image_outlined,
+              size: 64, color: Color(0xFF1D9E75))),
     );
   }
 }

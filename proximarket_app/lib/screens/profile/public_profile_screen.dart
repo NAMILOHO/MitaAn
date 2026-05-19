@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // ← Ajouté
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/user_model.dart';
 import '../../models/service_model.dart';
 import '../../services/user_service.dart';
@@ -87,7 +86,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       },
     );
 
-    // ====================== VERSION MISE À JOUR ======================
     if (raison != null && mounted) {
       await FirebaseFirestore.instance.collection('reports').add({
         'reporterId': FirebaseAuth.instance.currentUser?.uid,
@@ -103,7 +101,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         ),
       );
     }
-    // =================================================================
   }
 
   @override
@@ -147,7 +144,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // En-tête profil (inchangé)
+            // En-tête profil
             Container(
               width: double.infinity,
               color: primaryColor,
@@ -188,7 +185,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2), // ← Corrigé
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -346,7 +343,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     );
   }
 
-  // Méthodes restantes inchangées
   Widget _statItem(String value, String label) {
     return Column(
       children: [
@@ -378,7 +374,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06), // ← Corrigé
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),

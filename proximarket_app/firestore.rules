@@ -1,0 +1,91 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    function isValidString(value, min, max) {
+      return value is string && value.size() >= min && value.size() <= max;
+    }
+
+    // ==================== USERS ====================
+    match /users/{userId} {
+      allow read: if isAuth();
+      
+      allow create: if isOwner(userId);
+      
+      allow update: if isOwner(userId)
+        && (request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'nom', 'phone', 'bio', 'photoUrl', 'gpsLat', 'gpsLng', 'ville', 
+            'categorie', 'fcmToken', 'isPro'
+          ]))
+        && (!('nom' in request.resource.data) || isValidString(request.resource.data.nom, 2, 100))
+        && (!('bio' in request.resource.data) || isValidString(request.resource.data.bio, 0, 200));
+    }
+
+    // ==================== SERVICES / ANNONCES ====================
+    match /services/{serviceId} {
+      allow read: if isAuth();
+
+      allow create: if isAuth()
+        && request.resource.data.userId == request.auth.uid
+        && isValidString(request.resource.data.titre, 5, 100)
+        && isValidString(request.resource.data.description, 20, 1000)
+        && request.resource.data.prix is number
+        && request.resource.data.prix >= 0
+        && request.resource.data.categorie is string
+        && request.resource.data.categorie.size() > 0;
+
+      allow update: if isAuth()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid  // Empêche de changer le propriétaire
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'titre', 'description', 'prix', 'unite', 'photos', 
+            'gpsLat', 'gpsLng', 'ville', 'isActive'
+          ]);
+
+      allow delete: if isAuth() && resource.data.userId == request.auth.uid;
+    }
+
+    // ==================== FAVORIS (sous-collection) ====================
+    match /users/{userId}/favorites/{serviceId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ==================== CHATS & MESSAGES ====================
+    match /chats/{chatId} {
+      allow read, write: if isAuth() && request.auth.uid in resource.data.participants;
+      
+      allow create: if isAuth();
+
+      match /messages/{messageId} {
+        allow read: if isAuth() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        
+        allow create: if isAuth()
+          && request.resource.data.senderId == request.auth.uid
+          && isValidString(request.resource.data.text, 1, 2000);
+        
+        allow update: if isAuth() && request.resource.data.isRead == true;
+      }
+    }
+
+    // ==================== NOTIFICATIONS & SIGNALEMENTS ====================
+    match /notifications_queue/{docId} {
+      allow create: if isAuth();
+      allow read, update, delete: if false; // Réservé aux Cloud Functions
+    }
+
+    match /reports/{reportId} {
+      allow create: if isAuth() && request.resource.data.reporterId == request.auth.uid;
+      allow read, update, delete: if false; // Admin uniquement
+    }
+  }
+}

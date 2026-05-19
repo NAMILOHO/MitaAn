@@ -1,43 +1,40 @@
-import 'dart:async'; // ← Ajouté pour runZonedGuarded
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';     // Pour Settings
-import 'package:firebase_crashlytics/firebase_crashlytics.dart'; // ← Ajouté
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart' as app_auth;
 import 'providers/service_provider.dart';
+import 'providers/chat_provider.dart'; // ← AJOUT
 import 'services/notification_service.dart';
 
 import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/chat/chat_list_screen.dart'; // ← AJOUT pour route /chat
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Initialiser Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // 2. Persistence offline Firestore
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
 
-  // 3. Configuration Crashlytics
   FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
-  // 4. Initialiser les notifications
   await NotificationService().initialize();
 
-  // 5. Lancer l'application avec gestion des erreurs
   runZonedGuarded(
     () => runApp(const MyApp()),
     (error, stack) => FirebaseCrashlytics.instance.recordError(
@@ -57,11 +54,12 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => app_auth.AuthProvider()),
         ChangeNotifierProvider(create: (_) => ServiceProvider()),
+        ChangeNotifierProvider(create: (_) => ChatProvider()), // ← AJOUT
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
-        title: 'ProxiMarket',
+        title: 'MitaAn', // ✅ CORRECTION : était 'ProxiMarket'
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF1D9E75),
@@ -69,12 +67,23 @@ class MyApp extends StatelessWidget {
           useMaterial3: true,
         ),
         home: const SplashScreen(),
+        // ✅ AJOUT : route pour la navigation depuis les notifications push
+        routes: {
+          '/chat': (ctx) {
+            final args = ModalRoute.of(ctx)?.settings.arguments
+                as Map<String, dynamic>?;
+            // args contient 'chatId', 'senderId' depuis la notification
+            return const ChatListScreen();
+          },
+        },
       ),
     );
   }
 }
 
-// ====================== AUTH WRAPPER ======================
+// ─────────────────────────────────────────
+// AUTH WRAPPER
+// ─────────────────────────────────────────
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
@@ -94,7 +103,6 @@ class AuthWrapper extends StatelessWidget {
         }
 
         if (snapshot.hasData) {
-          // Sauvegarder token FCM dès connexion
           WidgetsBinding.instance.addPostFrameCallback((_) {
             NotificationService().saveTokenToFirestore(
               snapshot.data!.uid,
