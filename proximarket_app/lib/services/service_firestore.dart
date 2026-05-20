@@ -192,13 +192,20 @@ class ServiceFirestore {
   }
 
   // ─────────────────────────────────────────
-  // TOGGLE ACTIF / INACTIF
+   // ─────────────────────────────────────────
+  // TOGGLE ACTIF / INACTIF — Version améliorée
   // ─────────────────────────────────────────
   Future<void> toggleServiceActive(String serviceId, bool isActive) async {
-    await _firestore.collection('services').doc(serviceId).update({
-      'isActive': isActive,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+    try {
+      await _firestore.collection('services').doc(serviceId).update({
+        'isActive': isActive,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      debugPrint('✅ Statut du service $serviceId mis à jour → $isActive');
+    } catch (e) {
+      debugPrint('❌ Erreur toggleServiceActive: $e');
+      rethrow; // Pour que le Provider puisse catcher l’erreur
+    }
   }
 
   // ─────────────────────────────────────────

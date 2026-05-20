@@ -1,48 +1,35 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
-=======
-import 'package:cloud_firestore/cloud_firestore.dart';   // ← Import ajouté
+import 'package:cloud_firestore/cloud_firestore.dart';
 
->>>>>>> develop
 import '../models/service_model.dart';
 import '../services/service_firestore.dart';
 
 class ServiceProvider extends ChangeNotifier {
   final ServiceFirestore _serviceFirestore = ServiceFirestore();
 
-<<<<<<< HEAD
-=======
   // ✅ Exposé publiquement pour que CreateServiceScreen accède à pickImages()
   ServiceFirestore get serviceFirestore => _serviceFirestore;
 
->>>>>>> develop
   List<ServiceModel> _services = [];
   List<ServiceModel> _myServices = [];
   bool _isLoading = false;
   String? _errorMessage;
 
-<<<<<<< HEAD
-  // Getters
-=======
   // === NOUVELLES VARIABLES POUR LA PAGINATION ===
   DocumentSnapshot? _lastDocument;
   bool _hasMore = true;
   bool _isLoadingMore = false;
 
->>>>>>> develop
   List<ServiceModel> get services => _services;
   List<ServiceModel> get myServices => _myServices;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-<<<<<<< HEAD
-=======
   // Getters pagination
   bool get hasMore => _hasMore;
   bool get isLoadingMore => _isLoadingMore;
 
->>>>>>> develop
   // ─────────────────────────────────────────
   // CRÉER UNE ANNONCE
   // ─────────────────────────────────────────
@@ -52,10 +39,7 @@ class ServiceProvider extends ChangeNotifier {
     required String description,
     required String categorie,
     required double prix,
-<<<<<<< HEAD
-=======
     required String unite,
->>>>>>> develop
     required List<File> imageFiles,
     required double gpsLat,
     required double gpsLng,
@@ -63,10 +47,6 @@ class ServiceProvider extends ChangeNotifier {
   }) async {
     _setLoading(true);
     try {
-<<<<<<< HEAD
-      // 1. Uploader les photos
-=======
->>>>>>> develop
       List<String> photoUrls = [];
       if (imageFiles.isNotEmpty) {
         photoUrls = await _serviceFirestore.uploadServicePhotos(
@@ -75,35 +55,21 @@ class ServiceProvider extends ChangeNotifier {
         );
       }
 
-<<<<<<< HEAD
-      // 2. Créer l'annonce dans Firestore
-=======
->>>>>>> develop
       final service = await _serviceFirestore.createService(
         userId: userId,
         titre: titre,
         description: description,
         categorie: categorie,
         prix: prix,
-<<<<<<< HEAD
-=======
         unite: unite,
->>>>>>> develop
         photos: photoUrls,
         gpsLat: gpsLat,
         gpsLng: gpsLng,
         ville: ville,
       );
 
-<<<<<<< HEAD
-      // 3. Ajouter à la liste locale
       _services.insert(0, service);
       _myServices.insert(0, service);
-
-=======
-      _services.insert(0, service);
-      _myServices.insert(0, service);
->>>>>>> develop
       _errorMessage = null;
       notifyListeners();
       return true;
@@ -117,14 +83,6 @@ class ServiceProvider extends ChangeNotifier {
   }
 
   // ─────────────────────────────────────────
-<<<<<<< HEAD
-  // CHARGER TOUTES LES ANNONCES
-  // ─────────────────────────────────────────
-  Future<void> loadAllServices() async {
-    _setLoading(true);
-    try {
-      _services = await _serviceFirestore.getAllServices();
-=======
   // CHARGER TOUTES LES ANNONCES (Paginée)
   // ─────────────────────────────────────────
   Future<void> loadAllServices({bool reset = false}) async {
@@ -153,7 +111,6 @@ class ServiceProvider extends ChangeNotifier {
       _services.addAll(result.services);
       _lastDocument = result.lastDoc;
       _hasMore = result.services.length == 10;
->>>>>>> develop
       _errorMessage = null;
       notifyListeners();
     } catch (e) {
@@ -161,13 +118,6 @@ class ServiceProvider extends ChangeNotifier {
       notifyListeners();
     } finally {
       _setLoading(false);
-<<<<<<< HEAD
-    }
-  }
-
-  // ─────────────────────────────────────────
-  // CHARGER LES ANNONCES PAR CATÉGORIE
-=======
       _isLoadingMore = false;
       notifyListeners();
     }
@@ -180,7 +130,6 @@ class ServiceProvider extends ChangeNotifier {
 
   // ─────────────────────────────────────────
   // CHARGER PAR CATÉGORIE
->>>>>>> develop
   // ─────────────────────────────────────────
   Future<void> loadServicesByCategory(String categorie) async {
     _setLoading(true);
@@ -213,10 +162,41 @@ class ServiceProvider extends ChangeNotifier {
     }
   }
 
-<<<<<<< HEAD
-=======
   // ─────────────────────────────────────────
-  // AUTRES MÉTHODES (update, toggle, delete...)
+  // TOGGLE ACTIF / INACTIF → VERSION CORRIGÉE
+  // ─────────────────────────────────────────
+  Future<bool> toggleServiceActive(String serviceId, bool isActive) async {
+    _setLoading(true);
+    try {
+      // 1. Mise à jour Firestore
+      await _serviceFirestore.toggleServiceActive(serviceId, isActive);
+
+      // 2. Mise à jour locale optimiste
+      bool updated = _updateLocalServiceBool(serviceId, 'isActive', isActive);
+
+      // 3. Fallback si le service n'était pas dans les listes locales
+      if (!updated) {
+        // On recharge mes annonces (le plus probable)
+        // Remplacez "currentUserId" par la vraie récupération depuis AuthProvider
+        // Exemple : final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        // await loadMyServices(authProvider.currentUserId ?? '');
+        await loadMyServices(""); // ← À adapter avec le vrai userId
+      }
+
+      _errorMessage = null;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = 'Erreur lors du changement de statut : ${e.toString()}';
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // ─────────────────────────────────────────
+  // UPDATE SERVICE
   // ─────────────────────────────────────────
   Future<bool> updateService({
     required String serviceId,
@@ -271,19 +251,9 @@ class ServiceProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> toggleServiceActive(String serviceId, bool isActive) async {
-    try {
-      await _serviceFirestore.toggleServiceActive(serviceId, isActive);
-      _updateLocalServiceBool(serviceId, 'isActive', isActive);
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _errorMessage = e.toString();
-      notifyListeners();
-      return false;
-    }
-  }
-
+  // ─────────────────────────────────────────
+  // DELETE SERVICE
+  // ─────────────────────────────────────────
   Future<bool> deleteService(String serviceId) async {
     _setLoading(true);
     try {
@@ -322,16 +292,19 @@ class ServiceProvider extends ChangeNotifier {
     }
   }
 
-  void _updateLocalServiceBool(String serviceId, String field, bool value) {
+  // Helper amélioré pour le toggle
+  bool _updateLocalServiceBool(String serviceId, String field, bool value) {
+    bool hasUpdated = false;
     for (final list in [_services, _myServices]) {
       final idx = list.indexWhere((s) => s.id == serviceId);
       if (idx != -1 && field == 'isActive') {
         list[idx] = list[idx].copyWith(isActive: value);
+        hasUpdated = true;
       }
     }
+    return hasUpdated;
   }
 
->>>>>>> develop
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();

@@ -1,12 +1,14 @@
+// lib/screens/services/my_services_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+
 import '../../models/service_model.dart';
 import '../../providers/service_provider.dart';
 
 import 'service_detail_screen.dart';
 import 'create_service_screen.dart';
-import 'edit_service_screen.dart'; // ✅ AJOUT
+import 'edit_service_screen.dart';
 
 class MyServicesScreen extends StatefulWidget {
   const MyServicesScreen({super.key});
@@ -27,34 +29,38 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
   Future<void> _loadMyServices() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
-      await context.read<ServiceProvider>().loadMyServices(uid);
+      await context.read<ServiceProvider>().loadMyServices();
     }
   }
 
   // ─────────────────────────────────────────
-  // ✅ TOGGLE ACTIF / INACTIF
+  // ✅ TOGGLE ACTIF / INACTIF — VERSION AMÉLIORÉE
   // ─────────────────────────────────────────
   Future<void> _toggleActive(ServiceModel service) async {
     final newStatus = !service.isActive;
 
-    await context.read<ServiceProvider>().toggleServiceActive(
-          service.id,
-          newStatus,
-        );
+    // Feedback immédiat sans attendre Firestore
+    final success = await context
+        .read<ServiceProvider>()
+        .toggleServiceActive(service.id, newStatus);
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            newStatus
-                ? 'Annonce activée ✅'
-                : 'Annonce désactivée',
-          ),
-          backgroundColor: newStatus ? Colors.green : Colors.orange,
-          duration: const Duration(seconds: 2),
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? (newStatus ? 'Annonce activée ✅' : 'Annonce désactivée')
+              : 'Erreur — réessayez',
         ),
-      );
-    }
+        backgroundColor: success
+            ? (newStatus ? Colors.green : Colors.orange)
+            : Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   // ─────────────────────────────────────────
@@ -227,7 +233,6 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        // ✅ Bordure subtile rouge si inactif
         border: service.isActive
             ? null
             : Border.all(color: Colors.orange.withValues(alpha: 0.4)),
@@ -332,7 +337,7 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
                 horizontal: 12, vertical: 8),
             child: Row(
               children: [
-                // ✅ Bouton Modifier → EditServiceScreen
+                // Modifier
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () async {
@@ -363,7 +368,7 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
                 ),
                 const SizedBox(width: 8),
 
-                // Bouton Voir
+                // Voir
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => Navigator.push(
@@ -391,7 +396,7 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
                 ),
                 const SizedBox(width: 8),
 
-                // Bouton Supprimer
+                // Supprimer
                 IconButton(
                   onPressed: () => _confirmDelete(context, service),
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
