@@ -1,14 +1,21 @@
-import 'dart:async'; // ← Ajouté pour runZonedGuarded
+import 'dart:async';
+
+import 'package:flutter/foundation.dart'; // Import requis pour PlatformDispatcher
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';     // Pour Settings
-import 'package:firebase_crashlytics/firebase_crashlytics.dart'; // ← Ajouté
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+
 import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
+
 import 'providers/auth_provider.dart' as app_auth;
 import 'providers/service_provider.dart';
+
 import 'services/notification_service.dart';
 
 import 'screens/auth/login_screen.dart';
@@ -20,24 +27,53 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Initialiser Firebase
+  // =========================
+  // ORIENTATION BLOQUÉE
+  // =========================
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
+
+  // =========================
+  // INITIALISATION FIREBASE
+  // =========================
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // 2. Persistence offline Firestore
+  // =========================
+  // PERSISTENCE OFFLINE FIRESTORE
+  // =========================
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
 
-  // 3. Configuration Crashlytics
+  // =========================
+  // CRASHLYTICS FLUTTER ERRORS
+  // =========================
   FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
-  // 4. Initialiser les notifications
+  // =========================
+  // CRASHLYTICS PLATFORM ERRORS
+  // =========================
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(
+      error,
+      stack,
+      fatal: true,
+    );
+    return true;
+  };
+
+  // =========================
+  // INITIALISATION NOTIFICATIONS
+  // =========================
   await NotificationService().initialize();
 
-  // 5. Lancer l'application avec gestion des erreurs
+  // =========================
+  // LANCEMENT APPLICATION (ZONÉ)
+  // =========================
   runZonedGuarded(
     () => runApp(const MyApp()),
     (error, stack) => FirebaseCrashlytics.instance.recordError(
@@ -48,6 +84,9 @@ void main() async {
   );
 }
 
+// ======================================================
+// APP PRINCIPALE
+// ======================================================
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -55,18 +94,58 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => app_auth.AuthProvider()),
-        ChangeNotifierProvider(create: (_) => ServiceProvider()),
+        ChangeNotifierProvider(
+          create: (_) => app_auth.AuthProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ServiceProvider(),
+        ),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         title: 'ProxiMarket',
         theme: ThemeData(
+          useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF1D9E75),
           ),
-          useMaterial3: true,
+          scaffoldBackgroundColor: Colors.white,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            centerTitle: true,
+            foregroundColor: Colors.black,
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1D9E75),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 52),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.grey.shade100,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: Color(0xFF1D9E75),
+                width: 1.5,
+              ),
+            ),
+          ),
         ),
         home: const SplashScreen(),
       ),
@@ -74,7 +153,9 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// ====================== AUTH WRAPPER ======================
+// ======================================================
+// AUTH WRAPPER
+// ======================================================
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
@@ -83,6 +164,9 @@ class AuthWrapper extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
+        // =========================
+        // CHARGEMENT
+        // =========================
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(
@@ -93,16 +177,30 @@ class AuthWrapper extends StatelessWidget {
           );
         }
 
-        if (snapshot.hasData) {
-          // Sauvegarder token FCM dès connexion
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            NotificationService().saveTokenToFirestore(
-              snapshot.data!.uid,
-            );
+        // =========================
+        // UTILISATEUR CONNECTÉ
+        // =========================
+        if (snapshot.hasData && snapshot.data != null) {
+          final user = snapshot.data!;
+
+          // Sauvegarde token FCM
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            try {
+              await NotificationService().saveTokenToFirestore(user.uid);
+            } catch (e, stack) {
+              FirebaseCrashlytics.instance.recordError(
+                e,
+                stack,
+              );
+            }
           });
+
           return const HomeScreen();
         }
 
+        // =========================
+        // UTILISATEUR NON CONNECTÉ
+        // =========================
         return const LoginScreen();
       },
     );
