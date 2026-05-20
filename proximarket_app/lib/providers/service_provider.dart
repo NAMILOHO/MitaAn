@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';   // ← Import ajouté
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 
 import '../models/service_model.dart';
 import '../services/service_firestore.dart';
@@ -218,15 +218,21 @@ class ServiceProvider extends ChangeNotifier {
     }
   }
 
+  // ✅ MÉTHODE MODIFIÉE POUR RECRUTER LES LOGS D'ERREUR
   Future<bool> toggleServiceActive(String serviceId, bool isActive) async {
+    // Optimistic UI — mise à jour locale immédiate pour éviter la latence visuelle
+    _updateLocalServiceBool(serviceId, 'isActive', isActive);
+    notifyListeners();
+    
     try {
       await _serviceFirestore.toggleServiceActive(serviceId, isActive);
-      _updateLocalServiceBool(serviceId, 'isActive', isActive);
-      notifyListeners();
       return true;
     } catch (e) {
+      // Rollback si erreur Firestore (on remet l'ancienne valeur inverse)
+      _updateLocalServiceBool(serviceId, 'isActive', !isActive);
       _errorMessage = e.toString();
       notifyListeners();
+      debugPrint('❌ toggleServiceActive error: $e'); // ← AJOUTÉ
       return false;
     }
   }

@@ -32,29 +32,33 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
   }
 
   // ─────────────────────────────────────────
-  // ✅ TOGGLE ACTIF / INACTIF
+  // ✅ TOGGLE ACTIF / INACTIF (UI Optimiste)
   // ─────────────────────────────────────────
   Future<void> _toggleActive(ServiceModel service) async {
     final newStatus = !service.isActive;
-
-    await context.read<ServiceProvider>().toggleServiceActive(
-          service.id,
-          newStatus,
-        );
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            newStatus
-                ? 'Annonce activée ✅'
-                : 'Annonce désactivée',
-          ),
-          backgroundColor: newStatus ? Colors.green : Colors.orange,
-          duration: const Duration(seconds: 2),
+    
+    // Feedback immédiat sans attendre Firestore
+    final success = await context
+        .read<ServiceProvider>()
+        .toggleServiceActive(service.id, newStatus);
+        
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? (newStatus ? 'Annonce activée ✅' : 'Annonce désactivée')
+              : 'Erreur — réessayez',
         ),
-      );
-    }
+        backgroundColor: success
+            ? (newStatus ? Colors.green : Colors.orange)
+            : Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   // ─────────────────────────────────────────
@@ -227,7 +231,7 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        // ✅ Bordure subtile rouge si inactif
+        // ✅ Bordure subtile orange si inactif
         border: service.isActive
             ? null
             : Border.all(color: Colors.orange.withValues(alpha: 0.4)),
