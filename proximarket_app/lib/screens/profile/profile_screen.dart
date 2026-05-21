@@ -41,13 +41,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
   UserModel? _userModel;
   bool _isLoading = true;
   bool _isUploadingPhoto = false;
+  
+  // Variables fallbacks au cas où les streams tardent à s'initialiser
   int _servicesCount = 0;
   int _favoritesCount = 0;
+  
+  // Streams pour le temps réel
+  Stream<int>? _favoritesStream;
+  Stream<int>? _servicesStream;
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
+    _initStreams();
+  }
+
+  void _initStreams() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    // Écoute des favoris en temps réel
+    _favoritesStream = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .map((snap) {
+          final data = snap.data();
+          if (data == null) return 0;
+          final favs = data['favorites'];
+          if (favs == null) return 0;
+          return (favs as List).length;
+        });
+
+    // Écoute des annonces actives en temps réel
+    _servicesStream = FirebaseFirestore.instance
+        .collection('services')
+        .where('userId', isEqualTo: uid)
+        .where('isActive', isEqualTo: true)
+        .snapshots()
+        .map((snap) => snap.docs.length);
   }
 
   Future<void> _loadProfile() async {
@@ -58,7 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final user = await _userService.getUserProfile(uid);
 
       if (user != null) {
-        // Compter les annonces actives
+        // Chargement initial unique (sert aussi de valeur par défaut pour les StreamBuilders)
         final servicesSnap = await FirebaseFirestore.instance
             .collection('services')
             .where('userId', isEqualTo: uid)
@@ -408,10 +441,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Row(
         children: [
-          _statItem('$_servicesCount', 'Annonces'),
+          // 1. Compteur Annonces en temps réel
+          StreamBuilder<int>(
+            stream: _servicesStream,
+            builder: (context, snap) {
+              final count = snap.data ?? _servicesCount;
+              return _statItem('$count', 'Annonces');
+            },
+          ),
           _statDivider(),
-          _statItem('$_favoritesCount', 'Favoris'),
+          
+          // 2. Compteur Favoris en temps réel
+          StreamBuilder<int>(
+            stream: _favoritesStream,
+            builder: (context, snap) {
+              final count = snap.data ?? _favoritesCount;
+              return _statItem('$count', 'Favoris');
+            },
+          ),
           _statDivider(),
+          
+          // 3. Messages (Toujours statique à 0 pour l'instant)
           _statItem('0', 'Messages'),
         ],
       ),

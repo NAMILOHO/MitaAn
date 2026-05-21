@@ -8,11 +8,11 @@ import '../profile/profile_screen.dart';
 import '../chat/chat_list_screen.dart';
 import '../services/service_detail_screen.dart';
 import '../map/map_screen.dart';
-
 import '../../services/location_service.dart';
 import '../../services/user_service.dart';
 import '../../models/user_model.dart';
 import '../../providers/service_provider.dart';
+import '../../providers/category_provider.dart';   // ← AJOUTÉ
 
 // ─────────────────────────────────────────────────
 // COULEURS & THÈME
@@ -43,6 +43,13 @@ class HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
   void changeTab(int index) => setState(() => _currentIndex = index);
+
+  void changeTabWithCategory(String category) {
+    setState(() {
+      _currentIndex = 2;
+      _screens[2] = ServicesListScreen(initialCategory: category);
+    });
+  }
 
   late final List<Widget> _screens;
 
@@ -321,7 +328,6 @@ class _HomeTabState extends State<_HomeTab> {
               children: [
                 Row(
                   children: [
-                    // Localisation
                     Expanded(
                       child: GestureDetector(
                         onTap: _updateLocation,
@@ -377,7 +383,6 @@ class _HomeTabState extends State<_HomeTab> {
                         ),
                       ),
                     ),
-                    // Cloche + Avatar
                     Row(
                       children: [
                         Container(
@@ -423,7 +428,6 @@ class _HomeTabState extends State<_HomeTab> {
         ? _userModel!.nom[0].toUpperCase()
         : 'U';
     final photoUrl = _userModel?.photoUrl ?? '';
-
     return Container(
       width: 38,
       height: 38,
@@ -579,7 +583,7 @@ class _HomeTabState extends State<_HomeTab> {
     );
   }
 
-  // ── CATÉGORIES ──
+  // ── CATÉGORIES (MIS À JOUR AVEC CATEGORY PROVIDER) ──
   Widget _buildCategories() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -624,9 +628,10 @@ class _HomeTabState extends State<_HomeTab> {
             itemBuilder: (context, i) {
               final cat = _categories[i];
               return GestureDetector(
-                onTap: () async {
-                  await context.read<ServiceProvider>().loadServicesByCategory(cat.label);
-                  if (!mounted) return;
+                onTap: () {
+                  // Injecter la catégorie dans le provider
+                  context.read<CategoryProvider>().selectCategory(cat.label);
+                  // Naviguer vers l'onglet liste
                   final homeState = context.findAncestorStateOfType<HomeScreenState>();
                   homeState?.changeTab(2);
                 },
@@ -712,13 +717,10 @@ class _HomeTabState extends State<_HomeTab> {
             ),
           );
         }
-
         if (provider.services.isEmpty) {
           return SliverToBoxAdapter(child: _buildEmptyState());
         }
-
         final items = provider.services.take(4).toList();
-
         return SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           sliver: SliverList(
@@ -822,7 +824,6 @@ class _ServiceCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Photo
             ClipRRect(
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
@@ -840,7 +841,6 @@ class _ServiceCard extends StatelessWidget {
                     : _placeholder(catBg, catColor),
               ),
             ),
-            // Infos
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),

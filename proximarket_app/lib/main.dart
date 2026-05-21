@@ -1,23 +1,18 @@
 import 'dart:async';
-
 import 'package:flutter/foundation.dart'; // Import requis pour PlatformDispatcher
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-
 import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
-
 import 'providers/auth_provider.dart' as app_auth;
 import 'providers/service_provider.dart';
-
+import 'providers/category_provider.dart';        // ← AJOUTÉ
 import 'services/notification_service.dart';
-
 import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/splash_screen.dart';
@@ -99,6 +94,9 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => ServiceProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => CategoryProvider(),   // ← AJOUTÉ
         ),
       ],
       child: MaterialApp(
@@ -182,7 +180,6 @@ class AuthWrapper extends StatelessWidget {
         // =========================
         if (snapshot.hasData && snapshot.data != null) {
           final user = snapshot.data!;
-
           // Sauvegarde token FCM
           WidgetsBinding.instance.addPostFrameCallback((_) async {
             try {
@@ -194,7 +191,6 @@ class AuthWrapper extends StatelessWidget {
               );
             }
           });
-
           return const HomeScreen();
         }
 
