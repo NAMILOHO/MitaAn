@@ -60,7 +60,7 @@ class HomeScreenState extends State<HomeScreen> {
       const _HomeTab(),
       const MapScreen(),
       const ServicesListScreen(),
-      const CreateServiceScreen(),
+      const SizedBox.shrink(),
       const ChatListScreen(),
       const ProfileScreen(),
     ];
@@ -113,7 +113,7 @@ class _BottomNav extends StatelessWidget {
             _NavItem(icon: Icons.search_rounded, label: 'Rechercher', index: 2, current: currentIndex, onTap: onTap),
             // Bouton Publier centré
             GestureDetector(
-              onTap: () => onTap(3),
+              onTap: () => _openPublish(context),
               child: Container(
                 width: 52,
                 height: 52,
@@ -135,6 +135,16 @@ class _BottomNav extends StatelessWidget {
             _NavItem(icon: Icons.person_outline_rounded, label: 'Profil', index: 5, current: currentIndex, onTap: onTap),
           ],
         ),
+      ),
+    );
+  }
+
+  void _openPublish(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => const CreateServiceScreen(),
       ),
     );
   }

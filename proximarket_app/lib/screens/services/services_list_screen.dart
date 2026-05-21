@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 
 import '../../providers/service_provider.dart';
-import '../../providers/category_provider.dart';   // ← AJOUTÉ
+import '../../providers/category_provider.dart';
 import '../../services/user_service.dart';
 import '../../models/service_model.dart';
 import '../../utils/geo_utils.dart';
@@ -111,28 +111,6 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
     super.initState();
     _loadData();
     _scrollController.addListener(_onScroll);
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Récupérer la catégorie sélectionnée depuis le provider
-    final cat = context.read<CategoryProvider>().selectedCategory;
-    if (cat != null && !_selectedCategories.contains(cat)) {
-      setState(() {
-        _selectedCategories.clear();
-        _selectedCategories.add(cat);
-      });
-      // Reset après application
-      context.read<CategoryProvider>().reset();
-    }
-
-    // Fallback pour initialCategory
-    if (widget.initialCategory != null && _selectedCategories.isEmpty) {
-      setState(() {
-        _selectedCategories.add(widget.initialCategory!);
-      });
-    }
   }
 
   @override
@@ -250,6 +228,20 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Écouter le CategoryProvider en temps réel
+    final cat = context.watch<CategoryProvider>().selectedCategory;
+    if (cat != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _selectedCategories.clear();
+            _selectedCategories.add(cat);
+          });
+          context.read<CategoryProvider>().reset();
+        }
+      });
+    }
+
     return Scaffold(
       backgroundColor: _T.bg,
       body: Column(

@@ -235,7 +235,9 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
         ),
       );
       _resetForm();
-      if (mounted) Navigator.pop(context);
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
     } else {
       final err = context.read<ServiceProvider>().errorMessage;
       _showError(err ?? 'Erreur lors de la publication');
@@ -277,8 +279,12 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.close, color: Colors.black),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
+          },
         ),
         title: const Text(
           'Publier une annonce',
