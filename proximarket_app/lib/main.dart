@@ -13,9 +13,11 @@ import 'providers/auth_provider.dart' as app_auth;
 import 'providers/service_provider.dart';
 import 'providers/category_provider.dart';        // ← AJOUTÉ
 import 'services/notification_service.dart';
+import 'services/presence_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/splash_screen.dart';
+import 'widgets/offline_banner.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -65,6 +67,7 @@ void main() async {
   // INITIALISATION NOTIFICATIONS
   // =========================
   await NotificationService().initialize();
+  PresenceService().init();
 
   // =========================
   // LANCEMENT APPLICATION (ZONÉ)
@@ -99,53 +102,63 @@ class MyApp extends StatelessWidget {
           create: (_) => CategoryProvider(),   // ← AJOUTÉ
         ),
       ],
-      child: MaterialApp(
-        navigatorKey: navigatorKey,
-        debugShowCheckedModeBanner: false,
-        title: 'ProxiMarket',
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF1D9E75),
-          ),
-          scaffoldBackgroundColor: Colors.white,
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.white,
-            elevation: 0,
-            centerTitle: true,
-            foregroundColor: Colors.black,
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1D9E75),
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 52),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Column(
+          children: [
+            const OfflineBanner(),
+            Expanded(
+              child: MaterialApp(
+                navigatorKey: navigatorKey,
+                debugShowCheckedModeBanner: false,
+                title: 'ProxiMarket',
+                theme: ThemeData(
+                  useMaterial3: true,
+                  colorScheme: ColorScheme.fromSeed(
+                    seedColor: const Color(0xFF1D9E75),
+                  ),
+                  scaffoldBackgroundColor: Colors.white,
+                  appBarTheme: const AppBarTheme(
+                    backgroundColor: Colors.white,
+                    elevation: 0,
+                    centerTitle: true,
+                    foregroundColor: Colors.black,
+                  ),
+                  elevatedButtonTheme: ElevatedButtonThemeData(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1D9E75),
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 52),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  inputDecorationTheme: InputDecorationTheme(
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF1D9E75),
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+                home: const SplashScreen(),
               ),
             ),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: Colors.grey.shade100,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: Color(0xFF1D9E75),
-                width: 1.5,
-              ),
-            ),
-          ),
+          ],
         ),
-        home: const SplashScreen(),
       ),
     );
   }
@@ -183,8 +196,11 @@ class AuthWrapper extends StatelessWidget {
           // Sauvegarde token FCM
           WidgetsBinding.instance.addPostFrameCallback((_) async {
             try {
+              await NotificationService().initialize();
               await NotificationService().saveTokenToFirestore(user.uid);
+              debugPrint('✅ FCM Token sauvegardé pour ${user.uid}');
             } catch (e, stack) {
+              debugPrint('❌ Erreur FCM : $e');
               FirebaseCrashlytics.instance.recordError(
                 e,
                 stack,

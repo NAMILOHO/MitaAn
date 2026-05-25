@@ -13,6 +13,8 @@ class ServiceModel {
   final double gpsLng;
   final String ville;
   final bool isActive;
+  final int quantity;
+  final bool isArchived;
   final DateTime? createdAt;
 
   ServiceModel({
@@ -28,6 +30,8 @@ class ServiceModel {
     this.gpsLng = 0.0,
     this.ville = '',
     this.isActive = true,
+    this.quantity = 0,
+    this.isArchived = false,
     this.createdAt,
   });
 
@@ -46,6 +50,8 @@ class ServiceModel {
       gpsLng: (map['gpsLng'] ?? 0.0).toDouble(),
       ville: map['ville'] ?? '',
       isActive: map['isActive'] ?? true,
+      quantity: (map['quantity'] ?? 0).toInt(),
+      isArchived: map['isArchived'] ?? false,
       createdAt: map['createdAt'] is Timestamp
           ? (map['createdAt'] as Timestamp).toDate()
           : map['createdAt']?.toDate(),
@@ -66,6 +72,8 @@ class ServiceModel {
       'gpsLng': gpsLng,
       'ville': ville,
       'isActive': isActive,
+      'quantity': quantity,
+      'isArchived': isArchived,
       if (createdAt != null) 'createdAt': createdAt,
     };
   }
@@ -82,6 +90,8 @@ class ServiceModel {
     double? gpsLng,
     String? ville,
     bool? isActive,
+    int? quantity,
+    bool? isArchived,
   }) {
     return ServiceModel(
       id: id,
@@ -96,6 +106,8 @@ class ServiceModel {
       gpsLng: gpsLng ?? this.gpsLng,
       ville: ville ?? this.ville,
       isActive: isActive ?? this.isActive,
+      quantity: quantity ?? this.quantity,
+      isArchived: isArchived ?? this.isArchived,
       createdAt: createdAt,
     );
   }

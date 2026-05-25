@@ -23,6 +23,7 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
   late TextEditingController _titreController;
   late TextEditingController _descriptionController;
   late TextEditingController _prixController;
+  late TextEditingController _quantityController;
 
   late String _selectedCategory;
   late String _selectedUnite;
@@ -63,6 +64,9 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
         TextEditingController(text: widget.service.description);
     _prixController =
         TextEditingController(text: widget.service.prix.toStringAsFixed(0));
+    _quantityController = TextEditingController(
+      text: widget.service.quantity > 0 ? widget.service.quantity.toString() : '',
+    );
 
     _selectedCategory = widget.service.categorie.isNotEmpty
         ? widget.service.categorie
@@ -83,6 +87,7 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
     _titreController.dispose();
     _descriptionController.dispose();
     _prixController.dispose();
+    _quantityController.dispose();
     super.dispose();
   }
 
@@ -204,6 +209,7 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
         'prix':        double.tryParse(_prixController.text.trim()) ?? 0.0,
         'unite':       _selectedUnite,
         'photos':      allPhotos,
+        'quantity':    int.tryParse(_quantityController.text.trim()) ?? 0,
         'gpsLat':      _gpsLat,
         'gpsLng':      _gpsLng,
         'ville':       _ville,
@@ -372,6 +378,16 @@ class _EditServiceScreenState extends State<EditServiceScreen> {
                           ),
                         ),
                       ],
+                    ),
+
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _quantityController,
+                      keyboardType: TextInputType.number,
+                      decoration: _inputDecoration(
+                        'Stock disponible (0 = illimité)',
+                        Icons.inventory_2_outlined,
+                      ),
                     ),
 
                     const SizedBox(height: 24),

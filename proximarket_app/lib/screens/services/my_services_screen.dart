@@ -7,6 +7,7 @@ import '../../providers/service_provider.dart';
 import 'service_detail_screen.dart';
 import 'create_service_screen.dart';
 import 'edit_service_screen.dart'; // ✅ AJOUT
+import 'archived_services_screen.dart';
 
 class MyServicesScreen extends StatefulWidget {
   const MyServicesScreen({super.key});
@@ -137,6 +138,16 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.archive_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ArchivedServicesScreen(),
+              ),
+            ),
+            tooltip: 'Archives',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadMyServices,
@@ -394,6 +405,23 @@ class _MyServicesScreenState extends State<MyServicesScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
+
+                IconButton(
+                  onPressed: () async {
+                    await context.read<ServiceProvider>().archiveService(service.id);
+                    _loadMyServices();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Annonce archivée'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.archive_outlined, color: Colors.orange),
+                  tooltip: 'Archiver',
+                ),
 
                 // Bouton Supprimer
                 IconButton(

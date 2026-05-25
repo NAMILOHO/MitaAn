@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../models/user_model.dart';
 import '../../services/user_service.dart';
@@ -11,6 +12,7 @@ import 'edit_profile_screen.dart';
 import '../services/my_services_screen.dart';
 import 'favorites_screen.dart';
 import '../auth/login_screen.dart';
+import '../debug/debug_screen.dart';
 
 // ─────────────────────────────────────────────────
 // THÈME
@@ -558,7 +560,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             iconBg: const Color(0xFFE6F1FB),
             iconColor: const Color(0xFF185FA5),
             label: 'Modifier le profil',
-            last: true,
+            last: !kDebugMode,
             onTap: () async {
               final updated = await Navigator.push<bool>(
                 context,
@@ -567,6 +569,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               if (updated == true && mounted) await _loadProfile();
             },
           ),
+          if (kDebugMode) ...[
+            _menuDivider(),
+            _menuItem(
+              icon: Icons.bug_report_outlined,
+              iconBg: const Color(0xFFFFF3E0),
+              iconColor: Colors.orange,
+              label: 'Debug (interne)',
+              last: true,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const DebugScreen()),
+              ),
+            ),
+          ],
         ],
       ),
     );

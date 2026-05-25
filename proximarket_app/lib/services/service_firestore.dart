@@ -1,28 +1,31 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../models/service_model.dart';
+import '../utils/image_compressor.dart';
 import 'cloudinary_service.dart';
 
 class ServiceFirestore {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final ImagePicker _picker = ImagePicker();
 
   // ─────────────────────────────────────────
   // CHOISIR PLUSIEURS PHOTOS
   // ─────────────────────────────────────────
   Future<List<File>> pickImages() async {
     try {
-      final List<XFile> picked = await _picker.pickMultiImage(
-        maxWidth: 600,
-        maxHeight: 600,
-        imageQuality: 65,
+      final files = await ImageCompressor.pickMultipleCompressed(
+        maxWidth: 800,
+        maxHeight: 800,
+        quality: 70,
       );
-      return picked.map((xfile) => File(xfile.path)).toList();
+      final errors = ImageCompressor.validateAll(files);
+      if (errors.isNotEmpty) {
+        throw errors.first;
+      }
+      return files;
     } catch (e) {
-      throw 'Erreur lors de la sélection des photos';
+      throw 'Erreur lors de la sélection des photos : $e';
     }
   }
 
@@ -56,6 +59,7 @@ class ServiceFirestore {
     required String categorie,
     required double prix,
     required String unite,
+    required int quantity,
     required List<String> photos,
     required double gpsLat,
     required double gpsLng,
@@ -70,6 +74,7 @@ class ServiceFirestore {
       categorie: categorie,
       prix: prix,
       unite: unite,
+      quantity: quantity,
       photos: photos,
       gpsLat: gpsLat,
       gpsLng: gpsLng,
@@ -116,6 +121,50 @@ class ServiceFirestore {
       'isActive': false,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  Future<void> archiveService(String serviceId) async {
+    await _firestore.collection('services').doc(serviceId).update({
+      'isArchived': true,
+      'isActive': false,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> restoreService(String serviceId) async {
+    await _firestore.collection('services').doc(serviceId).update({
+      'isArchived': false,
+      'isActive': true,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<List<ServiceModel>> getArchivedServices(String userId) async {
+    final snap = await _firestore
+        .collection('services')
+        .where('userId', isEqualTo: userId)
+        .where('isArchived', isEqualTo: true)
+        .orderBy('updatedAt', descending: true)
+        .get();
+
+    return snap.docs
+        .map((doc) => ServiceModel.fromMap(doc.data(), doc.id))
+        .toList();
+  }
+
+  Future<void> decrementStock(String serviceId) async {
+    await _firestore.collection('services').doc(serviceId).update({
+      'quantity': FieldValue.increment(-1),
+    });
+
+    final doc = await _firestore.collection('services').doc(serviceId).get();
+    final qty = (doc.data()?['quantity'] ?? 1) as int;
+    if (qty <= 0) {
+      await _firestore.collection('services').doc(serviceId).update({
+        'isActive': false,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
   }
 
   // =============================================

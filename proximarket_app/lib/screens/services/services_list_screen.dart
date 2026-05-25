@@ -160,7 +160,7 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
   }
 
   List<ServiceModel> _filtered(List<ServiceModel> all) {
-    var result = all;
+    var result = List<ServiceModel>.from(all);
 
     // Filtre distance
     if (_myLat != null && _myLng != null) {
@@ -184,10 +184,10 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
           s.ville.toLowerCase().contains(_searchQuery)).toList();
 
       result.sort((a, b) {
-        final as_ = a.titre.toLowerCase().startsWith(_searchQuery);
-        final bs_ = b.titre.toLowerCase().startsWith(_searchQuery);
-        if (as_ && !bs_) return -1;
-        if (!as_ && bs_) return 1;
+        final aStarts = a.titre.toLowerCase().startsWith(_searchQuery);
+        final bStarts = b.titre.toLowerCase().startsWith(_searchQuery);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
         return 0;
       });
       return result;
@@ -436,8 +436,11 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
               final sel = _selectedCategories.contains(cat);
               return _chip(cat, sel, () {
                 setState(() {
-                  if (sel) _selectedCategories.remove(cat);
-                  else _selectedCategories.add(cat);
+                  if (sel) {
+                    _selectedCategories.remove(cat);
+                  } else {
+                    _selectedCategories.add(cat);
+                  }
                 });
               });
             }),
@@ -566,14 +569,27 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
 
   // ── LISTE ──
   Widget _buildList() {
-    return Consumer<ServiceProvider>(
-      builder: (context, provider, _) {
-        if (provider.isLoading && provider.services.isEmpty) {
+    return Selector<
+        ServiceProvider,
+        ({
+          List<ServiceModel> services,
+          bool isLoading,
+          bool isLoadingMore,
+          bool hasMore,
+        })>(
+      selector: (_, provider) => (
+        services: provider.services,
+        isLoading: provider.isLoading,
+        isLoadingMore: provider.isLoadingMore,
+        hasMore: provider.hasMore,
+      ),
+      builder: (context, data, _) {
+        if (data.isLoading && data.services.isEmpty) {
           return const Center(child: CircularProgressIndicator(color: _T.primary, strokeWidth: 2));
         }
-        final items = _filtered(provider.services);
+        final items = _filtered(data.services);
         if (items.isEmpty) {
-          return _buildEmptyState(provider.services.isEmpty);
+          return _buildEmptyState(data.services.isEmpty);
         }
         return RefreshIndicator(
           color: _T.primary,
@@ -584,23 +600,19 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
             itemCount: items.length + 1,
             itemBuilder: (context, index) {
               if (index == items.length) {
-                return Consumer<ServiceProvider>(
-                  builder: (_, p, __) {
-                    if (p.isLoadingMore) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Center(child: CircularProgressIndicator(color: _T.primary, strokeWidth: 2)),
-                      );
-                    }
-                    if (!p.hasMore) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Center(child: Text('Toutes les annonces sont affichées', style: TextStyle(color: _T.textTertiary, fontSize: 12))),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                );
+                if (data.isLoadingMore) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(child: CircularProgressIndicator(color: _T.primary, strokeWidth: 2)),
+                  );
+                }
+                if (!data.hasMore) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(child: Text('Toutes les annonces sont affichées', style: TextStyle(color: _T.textTertiary, fontSize: 12))),
+                  );
+                }
+                return const SizedBox.shrink();
               }
               return _ServiceTile(
                 service: items[index],
@@ -717,7 +729,8 @@ class _ServiceTile extends StatelessWidget {
                     ? Image.network(
                         service.photos.first,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _photoPlaceholder(catBg, catColor),
+                        errorBuilder: (context, error, stackTrace) =>
+                            _photoPlaceholder(catBg, catColor),
                       )
                     : _photoPlaceholder(catBg, catColor),
               ),

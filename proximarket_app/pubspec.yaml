@@ -32,6 +32,7 @@ dependencies:
   latlong2: ^0.9.1
   http: ^1.6.0
   shared_preferences: ^2.3.2
+  connectivity_plus: ^6.0.3
   flutter_native_splash: ^2.3.0   # Requis ici si tu appelles FlutterNativeSplash.preserve() au runtime
   firebase_crashlytics: ^4.0.0    # Obligatoire dans dependencies pour initialiser le tracking dans le code
 

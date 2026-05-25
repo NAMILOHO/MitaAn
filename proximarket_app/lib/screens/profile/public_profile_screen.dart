@@ -6,9 +6,11 @@ import '../../models/user_model.dart';
 import '../../models/service_model.dart';
 import '../../services/user_service.dart';
 import '../../services/service_firestore.dart';
+import '../../widgets/rating_bar.dart';
 
 import '../services/service_detail_screen.dart';
 import '../chat/chat_screen.dart';
+import '../reviews/review_screen.dart';
 
 class PublicProfileScreen extends StatefulWidget {
   final String userId;
@@ -370,6 +372,16 @@ class _PublicProfileScreenState
                     ),
                   ],
 
+                  if (_user!.reviewCount > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: RatingBar(
+                        rating: _user!.rating,
+                        count: _user!.reviewCount,
+                        size: 18,
+                      ),
+                    ),
+
                   if (_user!.createdAt != null) ...[
                     const SizedBox(height: 4),
 
@@ -523,6 +535,37 @@ class _PublicProfileScreenState
                             BorderRadius.circular(
                           12,
                         ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            if (!isMe)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ReviewScreen(targetUser: _user!),
+                      ),
+                    ),
+                    icon: const Icon(
+                      Icons.star_outline_rounded,
+                      color: primaryColor,
+                    ),
+                    label: const Text(
+                      'Laisser un avis',
+                      style: TextStyle(color: primaryColor),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: primaryColor),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),

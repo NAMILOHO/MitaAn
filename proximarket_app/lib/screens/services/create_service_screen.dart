@@ -25,6 +25,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
   final _titreController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _prixController = TextEditingController();
+  final _quantityController = TextEditingController();
 
   // Données
   String? _selectedCategory;
@@ -70,6 +71,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
     _titreController.dispose();
     _descriptionController.dispose();
     _prixController.dispose();
+    _quantityController.dispose();
     super.dispose();
   }
 
@@ -217,6 +219,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
       categorie: _selectedCategory!,
       prix: prix < 0 ? 0.0 : prix,
       unite: _selectedUnite,
+      quantity: int.tryParse(_quantityController.text.trim()) ?? 0,
       imageFiles: _selectedImages,
       gpsLat: _gpsLat,
       gpsLng: _gpsLng,
@@ -259,6 +262,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
     _titreController.clear();
     _descriptionController.clear();
     _prixController.clear();
+    _quantityController.clear();
     setState(() {
       _currentStep = 0;
       _selectedCategory = null;
@@ -437,6 +441,15 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _quantityController,
+              keyboardType: TextInputType.number,
+              decoration: _inputDecoration(
+                'Stock disponible (optionnel)',
+                Icons.inventory_2_outlined,
+              ),
             ),
           ],
         ),

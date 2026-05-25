@@ -3,11 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/user_model.dart';
+import '../utils/image_compressor.dart';
 import 'cloudinary_service.dart';
 
 class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final ImagePicker _picker = ImagePicker();
 
   // ─────────────────────────────────────────
   // RÉCUPÉRER LE PROFIL UTILISATEUR
@@ -29,14 +29,16 @@ class UserService {
   // ─────────────────────────────────────────
   Future<File?> pickImage(ImageSource source) async {
     try {
-      final XFile? picked = await _picker.pickImage(
+      final file = await ImageCompressor.pickCompressed(
         source: source,
         maxWidth: 400,
         maxHeight: 400,
-        imageQuality: 60,
+        quality: 60,
       );
-      if (picked != null) return File(picked.path);
-      return null;
+      if (file == null) return null;
+      final err = ImageCompressor.validate(file);
+      if (err != null) throw err;
+      return file;
     } catch (e) {
       throw 'Erreur lors de la sélection de la photo : $e';
     }

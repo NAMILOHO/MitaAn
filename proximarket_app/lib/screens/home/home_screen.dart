@@ -6,13 +6,19 @@ import '../services/services_list_screen.dart';
 import '../services/create_service_screen.dart';
 import '../profile/profile_screen.dart';
 import '../chat/chat_list_screen.dart';
+import '../notifications/notifications_screen.dart';
 import '../services/service_detail_screen.dart';
 import '../map/map_screen.dart';
 import '../../services/location_service.dart';
 import '../../services/user_service.dart';
+import '../../services/history_service.dart';
+import '../../services/service_firestore.dart';
+import '../../models/service_model.dart';
 import '../../models/user_model.dart';
 import '../../providers/service_provider.dart';
 import '../../providers/category_provider.dart';   // ← AJOUTÉ
+import '../../utils/geo_utils.dart';
+import '../../widgets/unread_badge.dart';
 
 // ─────────────────────────────────────────────────
 // COULEURS & THÈME
@@ -49,6 +55,14 @@ class HomeScreenState extends State<HomeScreen> {
       _currentIndex = 2;
       _screens[2] = ServicesListScreen(initialCategory: category);
     });
+  }
+
+  void openNotifications() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const NotificationsScreen(),
+      ),
+    );
   }
 
   late final List<Widget> _screens;
@@ -131,7 +145,15 @@ class _BottomNav extends StatelessWidget {
                 child: const Icon(Icons.add_rounded, color: Colors.white, size: 26),
               ),
             ),
-            _NavItem(icon: Icons.chat_bubble_outline_rounded, label: 'Messages', index: 4, current: currentIndex, onTap: onTap),
+            UnreadMessagesBadge(
+              child: _NavItem(
+                icon: Icons.chat_bubble_outline_rounded,
+                label: 'Messages',
+                index: 4,
+                current: currentIndex,
+                onTap: onTap,
+              ),
+            ),
             _NavItem(icon: Icons.person_outline_rounded, label: 'Profil', index: 5, current: currentIndex, onTap: onTap),
           ],
         ),
@@ -224,6 +246,9 @@ class _HomeTabState extends State<_HomeTab> {
   UserModel? _userModel;
   bool _isLoadingLocation = false;
   String _ville = '';
+  double? _myLat;
+  double? _myLng;
+  List<ServiceModel> _recentServices = [];
 
   static const List<_CategoryItem> _categories = [
     _CategoryItem(Icons.handyman_rounded, 'Artisan', Color(0xFFE1F5EE), Color(0xFF1D9E75)),
@@ -237,6 +262,7 @@ class _HomeTabState extends State<_HomeTab> {
   void initState() {
     super.initState();
     _loadUser();
+    _loadRecentServices();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ServiceProvider>().loadAllServices(reset: true);
     });
@@ -256,7 +282,23 @@ class _HomeTabState extends State<_HomeTab> {
     setState(() {
       _userModel = user;
       _ville = user?.ville ?? '';
+      _myLat = user?.gpsLat != 0.0 ? user?.gpsLat : null;
+      _myLng = user?.gpsLng != 0.0 ? user?.gpsLng : null;
     });
+  }
+
+  Future<void> _loadRecentServices() async {
+    final ids = await HistoryService().getHistory();
+    if (ids.isEmpty) return;
+
+    final futures = ids.take(5).map((id) => ServiceFirestore().getServiceById(id));
+    final results = await Future.wait(futures);
+
+    if (mounted) {
+      setState(() {
+        _recentServices = results.whereType<ServiceModel>().toList();
+      });
+    }
   }
 
   Future<void> _updateLocation() async {
@@ -269,6 +311,8 @@ class _HomeTabState extends State<_HomeTab> {
       setState(() {
         _userModel = updated;
         _ville = updated?.ville ?? '';
+        _myLat = updated?.gpsLat != 0.0 ? updated?.gpsLat : null;
+        _myLng = updated?.gpsLng != 0.0 ? updated?.gpsLng : null;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -293,11 +337,6 @@ class _HomeTabState extends State<_HomeTab> {
     }
   }
 
-  String get _firstName {
-    final nom = _userModel?.nom ?? '';
-    return nom.isNotEmpty ? nom.split(' ').first : 'là';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -305,14 +344,131 @@ class _HomeTabState extends State<_HomeTab> {
       body: CustomScrollView(
         slivers: [
           _buildAppBar(),
+          SliverToBoxAdapter(child: _buildGreeting()),
           SliverToBoxAdapter(child: _buildSearchBar()),
           SliverToBoxAdapter(child: _buildGpsCard()),
           SliverToBoxAdapter(child: _buildCategories()),
+          SliverToBoxAdapter(child: _buildRecentlyViewed()),
           SliverToBoxAdapter(child: _buildNearbyHeader()),
           _buildServicesList(),
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          final homeState = context.findAncestorStateOfType<HomeScreenState>();
+          homeState?.openNotifications();
+        },
+        child: const Icon(Icons.notifications),
+      ),
+    );
+  }
+
+  String get _firstName {
+    final nom = _userModel?.nom ?? '';
+    return nom.isNotEmpty ? nom.split(' ').first : 'là';
+  }
+
+  Widget _buildGreeting() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: Text(
+        'Bonjour, $_firstName 👋',
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: _T.textPrimary,
+          letterSpacing: -0.3,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentlyViewed() {
+    if (_recentServices.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
+          child: Text(
+            'Récemment consultés',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: _T.textPrimary,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 110,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: _recentServices.length,
+            itemBuilder: (context, i) {
+              final service = _recentServices[i];
+              return GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ServiceDetailScreen(service: service),
+                  ),
+                ),
+                child: Container(
+                  width: 90,
+                  margin: const EdgeInsets.only(right: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _T.border),
+                  ),
+                  child: Column(
+                    children: [
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(12),
+                        ),
+                        child: service.photos.isNotEmpty
+                            ? Image.network(
+                                service.photos.first,
+                                height: 60,
+                                width: 90,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Container(height: 60, color: _T.primaryLight),
+                              )
+                            : Container(
+                                height: 60,
+                                color: _T.primaryLight,
+                                child: const Icon(
+                                  Icons.image_outlined,
+                                  color: _T.primary,
+                                ),
+                              ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Text(
+                          service.titre,
+                          style: const TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -329,105 +485,89 @@ class _HomeTabState extends State<_HomeTab> {
         preferredSize: const Size.fromHeight(0),
         child: Container(height: 0.5, color: _T.border),
       ),
-      flexibleSpace: FlexibleSpaceBar(
-        background: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+      title: SafeArea(
+        child: Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: _updateLocation,
+                child: Row(
                   children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: _updateLocation,
-                        child: Row(
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: _T.primaryLight,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.location_on_rounded,
+                        size: 16,
+                        color: _T.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Localisation',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: _T.textTertiary,
+                          ),
+                        ),
+                        Row(
                           children: [
-                            Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: _T.primaryLight,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(
-                                Icons.location_on_rounded,
-                                size: 16,
-                                color: _T.primary,
+                            Text(
+                              _ville.isNotEmpty
+                                  ? (_ville.length > 18
+                                      ? '${_ville.substring(0, 18)}…'
+                                      : _ville)
+                                  : 'Définir ma position',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: _T.textPrimary,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Localisation',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: _T.textTertiary,
-                                  ),
-                                ),
-                                Row(
-                                  children: [
-                                    Text(
-                                      _ville.isNotEmpty
-                                          ? (_ville.length > 20 ? '${_ville.substring(0, 20)}…' : _ville)
-                                          : 'Définir ma position',
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: _T.textPrimary,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 2),
-                                    const Icon(
-                                      Icons.keyboard_arrow_down_rounded,
-                                      size: 16,
-                                      color: _T.textSecondary,
-                                    ),
-                                  ],
-                                ),
-                              ],
+                            const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 14,
+                              color: _T.textSecondary,
                             ),
                           ],
                         ),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: _T.bg,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: _T.border),
-                          ),
-                          child: const Icon(
-                            Icons.notifications_none_rounded,
-                            size: 20,
-                            color: _T.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        _buildAvatar(),
                       ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Bonjour, $_firstName 👋',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: _T.textPrimary,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                final homeState = context.findAncestorStateOfType<HomeScreenState>();
+                homeState?.openNotifications();
+              },
+              child: Container(
+                width: 38,
+                height: 38,
+                margin: const EdgeInsets.only(right: 10),
+                decoration: BoxDecoration(
+                  color: _T.bg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _T.border),
+                ),
+                child: const Icon(
+                  Icons.notifications_none_rounded,
+                  size: 20,
+                  color: _T.textSecondary,
+                ),
+              ),
+            ),
+            _buildAvatar(),
+          ],
         ),
       ),
     );
@@ -730,21 +870,55 @@ class _HomeTabState extends State<_HomeTab> {
         if (provider.services.isEmpty) {
           return SliverToBoxAdapter(child: _buildEmptyState());
         }
-        final items = provider.services.take(4).toList();
+
+        final items = List.of(provider.services);
+        if (_myLat != null && _myLng != null) {
+          items.sort((a, b) {
+            final dA = GeoUtils.isValidCoordinate(a.gpsLat, a.gpsLng)
+                ? GeoUtils.distanceBetween(_myLat!, _myLng!, a.gpsLat, a.gpsLng)
+                : double.infinity;
+            final dB = GeoUtils.isValidCoordinate(b.gpsLat, b.gpsLng)
+                ? GeoUtils.distanceBetween(_myLat!, _myLng!, b.gpsLat, b.gpsLng)
+                : double.infinity;
+            return dA.compareTo(dB);
+          });
+        }
+
+        final nearest = items.take(4).toList();
+
         return SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           sliver: SliverList(
             delegate: SliverChildBuilderDelegate(
-              (context, i) => _ServiceCard(
-                service: items[i],
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ServiceDetailScreen(service: items[i]),
+              (context, i) {
+                final service = nearest[i];
+                double? distance;
+                if (_myLat != null &&
+                    _myLng != null &&
+                    GeoUtils.isValidCoordinate(service.gpsLat, service.gpsLng)) {
+                  distance = GeoUtils.distanceBetween(
+                    _myLat!,
+                    _myLng!,
+                    service.gpsLat,
+                    service.gpsLng,
+                  );
+                }
+
+                return _ServiceCard(
+                  service: service,
+                  distanceKm: distance,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ServiceDetailScreen(
+                        service: service,
+                        distanceKm: distance,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              childCount: items.length,
+                );
+              },
+              childCount: nearest.length,
             ),
           ),
         );
@@ -784,9 +958,14 @@ class _HomeTabState extends State<_HomeTab> {
 // ─────────────────────────────────────────────────
 class _ServiceCard extends StatelessWidget {
   final dynamic service;
+  final double? distanceKm;
   final VoidCallback onTap;
 
-  const _ServiceCard({required this.service, required this.onTap});
+  const _ServiceCard({
+    required this.service,
+    required this.onTap,
+    this.distanceKm,
+  });
 
   static const _catColors = <String, Color>{
     'Artisan': Color(0xFF1D9E75),
@@ -846,7 +1025,8 @@ class _ServiceCard extends StatelessWidget {
                     ? Image.network(
                         service.photos.first,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _placeholder(catBg, catColor),
+                        errorBuilder: (context, error, stackTrace) =>
+                            _placeholder(catBg, catColor),
                       )
                     : _placeholder(catBg, catColor),
               ),
@@ -875,7 +1055,23 @@ class _ServiceCard extends StatelessWidget {
                           ),
                         ),
                         const Spacer(),
-                        if (service.ville != null && service.ville.isNotEmpty)
+                        if (distanceKm != null)
+                          Row(
+                            children: [
+                              const Icon(Icons.location_on_rounded, size: 11, color: _T.textTertiary),
+                              const SizedBox(width: 2),
+                              Text(
+                                GeoUtils.formatDistance(distanceKm!),
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: _T.textTertiary,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              _proximityBadge(distanceKm!),
+                            ],
+                          )
+                        else if (service.ville != null && service.ville.isNotEmpty)
                           Row(
                             children: [
                               const Icon(Icons.location_on_rounded, size: 11, color: _T.textTertiary),
@@ -957,6 +1153,42 @@ class _ServiceCard extends StatelessWidget {
       color: bg,
       child: Center(
         child: Icon(Icons.image_outlined, color: color, size: 28),
+      ),
+    );
+  }
+
+  Widget _proximityBadge(double km) {
+    Color color;
+    Color bg;
+    String label;
+
+    if (km <= 2) {
+      color = const Color(0xFF085041);
+      bg = const Color(0xFFE1F5EE);
+      label = 'Très proche';
+    } else if (km <= 10) {
+      color = const Color(0xFF633806);
+      bg = const Color(0xFFFAEEDA);
+      label = 'Proche';
+    } else {
+      color = const Color(0xFF444441);
+      bg = const Color(0xFFF1EFE8);
+      label = 'Éloigné';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
       ),
     );
   }
