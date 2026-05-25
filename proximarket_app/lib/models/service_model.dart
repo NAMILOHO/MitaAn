@@ -19,6 +19,8 @@ class ServiceModel {
   final double gpsLng;
   final String ville;
   final bool isActive;
+  final int quantity;
+  final bool isArchived;
   final DateTime? createdAt;
 
   ServiceModel({
@@ -37,6 +39,8 @@ class ServiceModel {
     this.gpsLng = 0.0,
     this.ville = '',
     this.isActive = true,
+    this.quantity = 0,
+    this.isArchived = false,
     this.createdAt,
   });
 
@@ -59,8 +63,13 @@ class ServiceModel {
       ville: map['ville'] ?? '',
       isActive: map['isActive'] ?? true,
 <<<<<<< HEAD
+<<<<<<< HEAD
       createdAt: map['createdAt']?.toDate(),
 =======
+=======
+      quantity: (map['quantity'] ?? 0).toInt(),
+      isArchived: map['isArchived'] ?? false,
+>>>>>>> develop
       createdAt: map['createdAt'] is Timestamp
           ? (map['createdAt'] as Timestamp).toDate()
           : map['createdAt']?.toDate(),
@@ -86,10 +95,15 @@ class ServiceModel {
       'ville': ville,
       'isActive': isActive,
 <<<<<<< HEAD
+<<<<<<< HEAD
       'createdAt': createdAt,
     };
   }
 =======
+=======
+      'quantity': quantity,
+      'isArchived': isArchived,
+>>>>>>> develop
       if (createdAt != null) 'createdAt': createdAt,
     };
   }
@@ -106,6 +120,8 @@ class ServiceModel {
     double? gpsLng,
     String? ville,
     bool? isActive,
+    int? quantity,
+    bool? isArchived,
   }) {
     return ServiceModel(
       id: id,
@@ -120,8 +136,14 @@ class ServiceModel {
       gpsLng: gpsLng ?? this.gpsLng,
       ville: ville ?? this.ville,
       isActive: isActive ?? this.isActive,
+      quantity: quantity ?? this.quantity,
+      isArchived: isArchived ?? this.isArchived,
       createdAt: createdAt,
     );
   }
+<<<<<<< HEAD
 >>>>>>> develop
 }
+=======
+}
+>>>>>>> develop

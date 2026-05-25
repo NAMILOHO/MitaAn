@@ -2,11 +2,19 @@ name: mitan_app
 description: MitaAn — Plateforme locale de services et de vente avec géolocalisation
 publish_to: 'none'
 
+<<<<<<< HEAD
+=======
+# The following defines the version and build number for your application.
+>>>>>>> develop
 version: 1.0.0+1
 
 environment:
   sdk: ^3.11.0
 
+<<<<<<< HEAD
+=======
+# Dependencies specify other packages that your package needs in order to work.
+>>>>>>> develop
 dependencies:
   flutter:
     sdk: flutter
@@ -37,24 +45,53 @@ dependencies:
   latlong2: ^0.9.1
   http: ^1.6.0
   shared_preferences: ^2.3.2
+<<<<<<< HEAD
   firebase_crashlytics: ^4.0.0
 
 >>>>>>> develop
 dev_dependencies:
   flutter_test:
     sdk: flutter
+=======
+  connectivity_plus: ^6.0.3
+  flutter_native_splash: ^2.3.0   # Requis ici si tu appelles FlutterNativeSplash.preserve() au runtime
+  firebase_crashlytics: ^4.0.0    # Obligatoire dans dependencies pour initialiser le tracking dans le code
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # The "flutter_lints" package below contains a set of recommended lints
+>>>>>>> develop
   flutter_lints: ^6.0.0
   # ✅ CORRECTION : ces packages de build appartiennent aux devDependencies
   # (ils ne doivent pas être inclus dans l'APK de production)
   flutter_launcher_icons: ^0.13.0
   flutter_native_splash: ^2.3.0
 
+<<<<<<< HEAD
 flutter:
   uses-material-design: true
 
   assets:
     - assets/images/
 
+=======
+  # Outils de génération d'icônes et d'écrans de démarrage
+  flutter_launcher_icons: ^0.13.0
+  flutter_native_splash: ^2.3.0
+
+# The following section is specific to Flutter packages.
+flutter:
+  # The following line ensures that the Material Icons font is included
+  uses-material-design: true
+
+  # === Configuration des assets ===
+  assets:
+    - assets/images/
+
+# === Configuration des icônes de l'application ===
+>>>>>>> develop
 flutter_launcher_icons:
   android: true
   ios: true

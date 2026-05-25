@@ -207,6 +207,7 @@ class LocationService {
 
   // ─────────────────────────────────────────
 <<<<<<< HEAD
+<<<<<<< HEAD
   // SAUVEGARDER LA POSITION DANS FIRESTORE
   // ─────────────────────────────────────────
   Future<void> saveUserLocation(String uid) async {
@@ -237,20 +238,17 @@ class LocationService {
             lat1, lng1, lat2, lng2) / 1000;
 =======
   // SAUVEGARDER POSITION UTILISATEUR
+=======
+  // SAUVEGARDER POSITION UTILISATEUR (MODIFIÉ)
+>>>>>>> develop
   // ─────────────────────────────────────────
-  Future<void> saveUserLocation(
-    String uid,
-  ) async {
+  Future<void> saveUserLocation(String uid) async {
     try {
-      final position =
-          await getCurrentPosition();
-
-      final city =
-          await getCityFromCoordinates(
+      final position = await getCurrentPosition();
+      final city = await getCityFromCoordinates(
         position.latitude,
         position.longitude,
       );
-
       await FirebaseFirestore.instance
           .collection('users')
           .doc(uid)
@@ -258,13 +256,11 @@ class LocationService {
         'gpsLat': position.latitude,
         'gpsLng': position.longitude,
         'ville': city,
-        'updatedAt':
-            FieldValue.serverTimestamp(),
+        // ✅ CORRECTION : 'updatedAt' maintenant autorisé par les règles
+        'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      throw Exception(
-        'Erreur sauvegarde position : $e',
-      );
+      throw Exception('Impossible de mettre à jour la position. Vérifiez vos permissions GPS.');
     }
   }
 
@@ -296,9 +292,7 @@ class LocationService {
     String? categorieFilter,
   }) async {
     try {
-      // IMPORTANT :
-      // Une seule condition Firestore
-      // pour éviter les erreurs d’index
+      // IMPORTANT : Une seule condition Firestore pour éviter les erreurs d’index
       final snapshot =
           await FirebaseFirestore.instance
               .collection('users')
@@ -312,32 +306,27 @@ class LocationService {
 
       for (final doc in snapshot.docs) {
         try {
-          final data =
-              doc.data();
+          final data = doc.data();
 
-          final user =
-              UserModel.fromMap(
+          final user = UserModel.fromMap(
             data,
             doc.id,
           );
 
           // Ignorer coordonnées invalides
-          if (user.gpsLat == 0.0 ||
-              user.gpsLng == 0.0) {
+          if (user.gpsLat == 0.0 || user.gpsLng == 0.0) {
             continue;
           }
 
           // Filtre catégorie
           if (categorieFilter != null &&
               categorieFilter.isNotEmpty &&
-              user.categorie !=
-                  categorieFilter) {
+              user.categorie != categorieFilter) {
             continue;
           }
 
           // Distance
-          final distance =
-              calculateDistance(
+          final distance = calculateDistance(
             myLat,
             myLng,
             user.gpsLat,
@@ -349,33 +338,27 @@ class LocationService {
             results.add(user);
           }
         } catch (e) {
-          debugPrint(
-            'Erreur utilisateur ${doc.id}: $e',
-          );
+          debugPrint('Erreur utilisateur ${doc.id}: $e');
         }
       }
 
       // Trier par distance
       results.sort((a, b) {
-        final distanceA =
-            calculateDistance(
+        final distanceA = calculateDistance(
           myLat,
           myLng,
           a.gpsLat,
           a.gpsLng,
         );
 
-        final distanceB =
-            calculateDistance(
+        final distanceB = calculateDistance(
           myLat,
           myLng,
           b.gpsLat,
           b.gpsLng,
         );
 
-        return distanceA.compareTo(
-          distanceB,
-        );
+        return distanceA.compareTo(distanceB);
       });
 
       return results;

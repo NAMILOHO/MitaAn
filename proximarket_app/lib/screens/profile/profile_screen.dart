@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../models/user_model.dart';
 import '../../services/user_service.dart';
@@ -11,6 +12,7 @@ import 'edit_profile_screen.dart';
 import '../services/my_services_screen.dart';
 import 'favorites_screen.dart';
 import '../auth/login_screen.dart';
+import '../debug/debug_screen.dart';
 
 // ─────────────────────────────────────────────────
 // THÈME
@@ -41,13 +43,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
   UserModel? _userModel;
   bool _isLoading = true;
   bool _isUploadingPhoto = false;
+<<<<<<< HEAD
   int _servicesCount = 0;
   int _favoritesCount = 0;
+=======
+  
+  // Variables fallbacks au cas où les streams tardent à s'initialiser
+  int _servicesCount = 0;
+  int _favoritesCount = 0;
+  
+  // Streams pour le temps réel
+  Stream<int>? _favoritesStream;
+  Stream<int>? _servicesStream;
+>>>>>>> develop
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
+    _initStreams();
+  }
+
+  void _initStreams() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    // Écoute des favoris en temps réel
+    _favoritesStream = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .map((snap) {
+          final data = snap.data();
+          if (data == null) return 0;
+          final favs = data['favorites'];
+          if (favs == null) return 0;
+          return (favs as List).length;
+        });
+
+    // Écoute des annonces actives en temps réel
+    _servicesStream = FirebaseFirestore.instance
+        .collection('services')
+        .where('userId', isEqualTo: uid)
+        .where('isActive', isEqualTo: true)
+        .snapshots()
+        .map((snap) => snap.docs.length);
   }
 
   Future<void> _loadProfile() async {
@@ -58,7 +98,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final user = await _userService.getUserProfile(uid);
 
       if (user != null) {
+<<<<<<< HEAD
         // Compter les annonces actives
+=======
+        // Chargement initial unique (sert aussi de valeur par défaut pour les StreamBuilders)
+>>>>>>> develop
         final servicesSnap = await FirebaseFirestore.instance
             .collection('services')
             .where('userId', isEqualTo: uid)
@@ -408,10 +452,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Row(
         children: [
+<<<<<<< HEAD
           _statItem('$_servicesCount', 'Annonces'),
           _statDivider(),
           _statItem('$_favoritesCount', 'Favoris'),
           _statDivider(),
+=======
+          // 1. Compteur Annonces en temps réel
+          StreamBuilder<int>(
+            stream: _servicesStream,
+            builder: (context, snap) {
+              final count = snap.data ?? _servicesCount;
+              return _statItem('$count', 'Annonces');
+            },
+          ),
+          _statDivider(),
+          
+          // 2. Compteur Favoris en temps réel
+          StreamBuilder<int>(
+            stream: _favoritesStream,
+            builder: (context, snap) {
+              final count = snap.data ?? _favoritesCount;
+              return _statItem('$count', 'Favoris');
+            },
+          ),
+          _statDivider(),
+          
+          // 3. Messages (Toujours statique à 0 pour l'instant)
+>>>>>>> develop
           _statItem('0', 'Messages'),
         ],
       ),
@@ -508,7 +576,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             iconBg: const Color(0xFFE6F1FB),
             iconColor: const Color(0xFF185FA5),
             label: 'Modifier le profil',
+<<<<<<< HEAD
             last: true,
+=======
+            last: !kDebugMode,
+>>>>>>> develop
             onTap: () async {
               final updated = await Navigator.push<bool>(
                 context,
@@ -517,6 +589,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
               if (updated == true && mounted) await _loadProfile();
             },
           ),
+<<<<<<< HEAD
+=======
+          if (kDebugMode) ...[
+            _menuDivider(),
+            _menuItem(
+              icon: Icons.bug_report_outlined,
+              iconBg: const Color(0xFFFFF3E0),
+              iconColor: Colors.orange,
+              label: 'Debug (interne)',
+              last: true,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const DebugScreen()),
+              ),
+            ),
+          ],
+>>>>>>> develop
         ],
       ),
     );

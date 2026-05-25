@@ -33,15 +33,6 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
-    defaultConfig {
-        applicationId = "com.mitan.app"
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
-        multiDexEnabled = true
-    }
-
     signingConfigs {
         create("release") {
             keyAlias = keystoreProperties["keyAlias"] as? String
@@ -51,9 +42,26 @@ android {
         }
     }
 
+    defaultConfig {
+        applicationId = "com.mitan.app"
+        minSdk = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+        multiDexEnabled = true
+    }
+
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            // On associe la configuration de signature release SEULEMENT si le fichier keystore est défini.
+            // Sinon, l'app utilisera la signature par défaut (debug) pour éviter le NullPointerException.
+            val releaseSigning = signingConfigs.getByName("release")
+            if (releaseSigning.storeFile != null && releaseSigning.storeFile!!.exists()) {
+                signingConfig = releaseSigning
+            } else {
+                println("⚠️ ATTENTION : key.properties ou le fichier keystore est introuvable. Compilation avec la signature debug.")
+                signingConfig = signingConfigs.getByName("debug")
+            }
         }
     }
 }

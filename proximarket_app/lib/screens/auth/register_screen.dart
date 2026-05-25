@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../widgets/phone_country_picker.dart';
 import '../home/home_screen.dart';      // ← Import ajouté
 import 'login_screen.dart';
 
@@ -24,6 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _passwordVisible = false;
   bool _isProfessional = false;
   String? _selectedCategory;
+  CountryCode _selectedCountry = kCountryCodes.first;
 
   static const Color primaryColor = Color(0xFF1D9E75);
 
@@ -68,7 +70,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
         nom: _nomController.text.trim(),
-        phone: _phoneController.text.trim(),
+        phone: '${_selectedCountry.dial}${_phoneController.text.trim()}',
         isPro: _isProfessional,
         categorie: _selectedCategory ?? '',
       );
@@ -162,13 +164,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 16),
 
                 // Téléphone
-                _buildTextField(
-                  controller: _phoneController,
-                  label: 'Numéro de téléphone',
-                  icon: Icons.phone_outlined,
-                  keyboardType: TextInputType.phone,
-                  validator: (value) =>
-                      value!.length < 8 ? 'Numéro invalide' : null,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    PhoneCountryPicker(
+                      selected: _selectedCountry,
+                      onChanged: (country) =>
+                          setState(() => _selectedCountry = country),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildTextField(
+                        controller: _phoneController,
+                        label: 'Numéro de téléphone',
+                        icon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone,
+                        validator: (value) =>
+                            value!.length < 8 ? 'Numéro invalide' : null,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
 

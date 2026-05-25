@@ -1,6 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+<<<<<<< HEAD
 import 'package:cloud_firestore/cloud_firestore.dart';
+=======
+import 'package:cloud_firestore/cloud_firestore.dart'; 
+>>>>>>> develop
 
 import '../models/service_model.dart';
 import '../services/service_firestore.dart';
@@ -40,6 +44,7 @@ class ServiceProvider extends ChangeNotifier {
     required String categorie,
     required double prix,
     required String unite,
+    required int quantity,
     required List<File> imageFiles,
     required double gpsLat,
     required double gpsLng,
@@ -62,6 +67,7 @@ class ServiceProvider extends ChangeNotifier {
         categorie: categorie,
         prix: prix,
         unite: unite,
+        quantity: quantity,
         photos: photoUrls,
         gpsLat: gpsLat,
         gpsLng: gpsLng,
@@ -251,9 +257,31 @@ class ServiceProvider extends ChangeNotifier {
     }
   }
 
+<<<<<<< HEAD
   // ─────────────────────────────────────────
   // DELETE SERVICE
   // ─────────────────────────────────────────
+=======
+  // ✅ MÉTHODE MODIFIÉE POUR RECRUTER LES LOGS D'ERREUR
+  Future<bool> toggleServiceActive(String serviceId, bool isActive) async {
+    // Optimistic UI — mise à jour locale immédiate pour éviter la latence visuelle
+    _updateLocalServiceBool(serviceId, 'isActive', isActive);
+    notifyListeners();
+    
+    try {
+      await _serviceFirestore.toggleServiceActive(serviceId, isActive);
+      return true;
+    } catch (e) {
+      // Rollback si erreur Firestore (on remet l'ancienne valeur inverse)
+      _updateLocalServiceBool(serviceId, 'isActive', !isActive);
+      _errorMessage = e.toString();
+      notifyListeners();
+      debugPrint('❌ toggleServiceActive error: $e'); // ← AJOUTÉ
+      return false;
+    }
+  }
+
+>>>>>>> develop
   Future<bool> deleteService(String serviceId) async {
     _setLoading(true);
     try {
@@ -272,6 +300,21 @@ class ServiceProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> archiveService(String serviceId) async {
+    try {
+      await _serviceFirestore.archiveService(serviceId);
+      _services.removeWhere((s) => s.id == serviceId);
+      _myServices.removeWhere((s) => s.id == serviceId);
+      _errorMessage = null;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
   // ─────────────────────────────────────────
   // HELPERS PRIVÉS
   // ─────────────────────────────────────────
@@ -287,6 +330,7 @@ class ServiceProvider extends ChangeNotifier {
           prix: (data['prix'] as num?)?.toDouble(),
           unite: data['unite'],
           photos: data['photos'] != null ? List<String>.from(data['photos']) : null,
+          quantity: data['quantity'],
         );
       }
     }

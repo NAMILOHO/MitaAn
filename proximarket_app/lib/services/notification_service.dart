@@ -16,6 +16,7 @@ Future<void> firebaseMessagingBackgroundHandler(
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
   debugPrint('📩 Message background: ${message.messageId}');
 }
 
@@ -23,14 +24,21 @@ class NotificationService {
   // Singleton
   static final NotificationService _instance =
       NotificationService._internal();
+
   factory NotificationService() => _instance;
+
   NotificationService._internal();
 
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications =
+  final FirebaseMessaging _messaging =
+      FirebaseMessaging.instance;
+
+  final FlutterLocalNotificationsPlugin
+      _localNotifications =
       FlutterLocalNotificationsPlugin();
 
-  // Canal Android
+  // ─────────────────────────────────────────
+  // CANAL ANDROID
+  // ─────────────────────────────────────────
   static const AndroidNotificationChannel _channel =
       AndroidNotificationChannel(
     'mitaan_channel',
@@ -44,102 +52,155 @@ class NotificationService {
   // INITIALISER
   // ─────────────────────────────────────────
   Future<void> initialize() async {
-    // 1. Enregistrer handler background
+    // Handler background
     FirebaseMessaging.onBackgroundMessage(
-        firebaseMessagingBackgroundHandler);
+      firebaseMessagingBackgroundHandler,
+    );
 
-    // 2. Demander permission
+    // Permission
     await _requestPermission();
 
-    // 3. Config notifications locales
+    // Notifications locales
     await _setupLocalNotifications();
 
-    // 4. Écouter messages foreground
+    // Écoute des notifications
     _listenForeground();
   }
 
   // ─────────────────────────────────────────
-  // DEMANDER PERMISSION
+  // DEMANDE DE PERMISSION
   // ─────────────────────────────────────────
   Future<void> _requestPermission() async {
-    final settings = await _messaging.requestPermission(
+    final settings =
+        await _messaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
       provisional: false,
     );
-    debugPrint('🔔 Permission: ${settings.authorizationStatus}');
+
+    debugPrint(
+      '🔔 Permission: ${settings.authorizationStatus}',
+    );
   }
 
   // ─────────────────────────────────────────
   // CONFIG NOTIFICATIONS LOCALES
   // ─────────────────────────────────────────
   Future<void> _setupLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings(
+    const androidSettings =
+        AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
+
+    const iosSettings =
+        DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
+
     const initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
     );
 
-    await _localNotifications.initialize(initSettings);
+    await _localNotifications.initialize(
+      initSettings,
+
+      // Tap notification locale
+      onDidReceiveNotificationResponse:
+          (NotificationResponse response) {
+        final payload = response.payload;
+
+        if (payload != null && payload.isNotEmpty) {
+          navigatorKey.currentState?.pushNamed(
+            '/chat',
+            arguments: {
+              'chatId': payload,
+            },
+          );
+        }
+      },
+    );
 
     final androidPlugin = _localNotifications
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
-    await androidPlugin?.createNotificationChannel(_channel);
+
+    await androidPlugin?.createNotificationChannel(
+      _channel,
+    );
   }
 
   // ─────────────────────────────────────────
-  // ÉCOUTER MESSAGES EN PREMIER PLAN
+  // ÉCOUTER LES NOTIFICATIONS
   // ─────────────────────────────────────────
   void _listenForeground() {
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      final notification = message.notification;
-      if (notification != null) {
-        _showLocalNotification(
-          title: notification.title ?? 'ProxiMarket',
-          body: notification.body ?? '',
-          payload: message.data['chatId'] ?? '',
-        );
-      }
-    });
+    // ======================
+    // MESSAGE FOREGROUND
+    // ======================
+    FirebaseMessaging.onMessage.listen(
+      (RemoteMessage message) {
+        final notification = message.notification;
 
-    // ====================== VERSION MISE À JOUR ======================
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      debugPrint('🔔 Notification cliquée: ${message.data}');
-      navigatorKey.currentState?.pushNamed('/chat', arguments: message.data);
-    });
-    // =================================================================
+        if (notification != null) {
+          _showLocalNotification(
+            title:
+                notification.title ??
+                'ProxiMarket',
+            body: notification.body ?? '',
+            payload:
+                message.data['chatId'] ?? '',
+          );
+        }
+      },
+    );
+
+    // ======================
+    // APP OUVERTE VIA NOTIFICATION
+    // ======================
+    FirebaseMessaging.onMessageOpenedApp.listen(
+      (RemoteMessage message) {
+        debugPrint(
+          '🔔 Notification cliquée: ${message.data}',
+        );
+
+        navigatorKey.currentState?.pushNamed(
+          '/chat',
+          arguments: message.data,
+        );
+      },
+    );
   }
 
   // ─────────────────────────────────────────
-  // AFFICHER UNE NOTIFICATION LOCALE
+  // AFFICHER NOTIFICATION LOCALE
   // ─────────────────────────────────────────
   Future<void> _showLocalNotification({
     required String title,
     required String body,
     String payload = '',
   }) async {
-    const androidDetails = AndroidNotificationDetails(
+    const androidDetails =
+        AndroidNotificationDetails(
       'mitaan_channel',
       'MitaAn Notifications',
-      channelDescription: 'Notifications MitaAn',
+      channelDescription:
+          'Notifications MitaAn',
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
     );
+
     const notifDetails = NotificationDetails(
       android: androidDetails,
       iOS: DarwinNotificationDetails(),
     );
 
     await _localNotifications.show(
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      DateTime.now().millisecondsSinceEpoch ~/
+          1000,
       title,
       body,
       notifDetails,
@@ -148,34 +209,51 @@ class NotificationService {
   }
 
   // ─────────────────────────────────────────
-  // SAUVEGARDER TOKEN FCM DANS FIRESTORE
+  // SAUVEGARDER TOKEN FCM
   // ─────────────────────────────────────────
-  Future<void> saveTokenToFirestore(String uid) async {
+  Future<void> saveTokenToFirestore(
+    String uid,
+  ) async {
     try {
       final token = await _messaging.getToken();
+
       if (token != null) {
         await FirebaseFirestore.instance
             .collection('users')
             .doc(uid)
-            .update({'fcmToken': token});
-        debugPrint('✅ Token FCM sauvegardé');
+            .update({
+          'fcmToken': token,
+        });
+
+        debugPrint(
+          '✅ Token FCM sauvegardé',
+        );
       }
 
-      // Écouter renouvellement du token
-      _messaging.onTokenRefresh.listen((newToken) async {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .update({'fcmToken': newToken});
-        debugPrint('🔄 Token FCM renouvelé');
-      });
+      // Refresh token
+      _messaging.onTokenRefresh.listen(
+        (newToken) async {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(uid)
+              .update({
+            'fcmToken': newToken,
+          });
+
+          debugPrint(
+            '🔄 Token FCM renouvelé',
+          );
+        },
+      );
     } catch (e) {
-      debugPrint('❌ Erreur token FCM: $e');
+      debugPrint(
+        '❌ Erreur token FCM: $e',
+      );
     }
   }
 
   // ─────────────────────────────────────────
-  // CRÉER UNE DEMANDE DE NOTIFICATION
+  // DEMANDE DE NOTIFICATION
   // ─────────────────────────────────────────
   Future<void> sendNotificationRequest({
     required String toUid,
@@ -191,11 +269,14 @@ class NotificationService {
         'title': title,
         'body': body,
         'data': data,
-        'createdAt': FieldValue.serverTimestamp(),
+        'createdAt':
+            FieldValue.serverTimestamp(),
         'sent': false,
       });
     } catch (e) {
-      debugPrint('❌ Erreur notification: $e');
+      debugPrint(
+        '❌ Erreur notification: $e',
+      );
     }
   }
 }

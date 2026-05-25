@@ -12,6 +12,10 @@ class UserModel {
   final String categorie;
   final String photoUrl;
   final String fcmToken;
+  final double rating;
+  final int reviewCount;
+  final bool isOnline;
+  final DateTime? lastSeen;
   final DateTime? createdAt;
 
   UserModel({
@@ -28,6 +32,10 @@ class UserModel {
     this.categorie = '',
     this.photoUrl = '',
     this.fcmToken = '',
+    this.rating = 0.0,
+    this.reviewCount = 0,
+    this.isOnline = false,
+    this.lastSeen,
     this.createdAt,
   });
 
@@ -59,9 +67,17 @@ class UserModel {
       categorie: map['categorie'] ?? '',
       photoUrl: map['photoUrl'] ?? '',
       fcmToken: map['fcmToken'] ?? '',
+<<<<<<< HEAD
       createdAt: map['createdAt'] != null
           ? map['createdAt'].toDate()
           : null,
+=======
+      rating: (map['rating'] ?? 0.0).toDouble(),
+      reviewCount: (map['reviewCount'] ?? 0).toInt(),
+      isOnline: map['isOnline'] ?? false,
+      lastSeen: map['lastSeen']?.toDate(),
+      createdAt: map['createdAt']?.toDate(),
+>>>>>>> develop
     );
   }
 
@@ -83,9 +99,14 @@ class UserModel {
       'categorie': categorie,
       'photoUrl': photoUrl,
       'fcmToken': fcmToken,
+      'rating': rating,
+      'reviewCount': reviewCount,
+      'isOnline': isOnline,
+      'lastSeen': lastSeen,
       'createdAt': createdAt,
     };
   }
+<<<<<<< HEAD
 
   // 🔥 BONUS PRO (très utile pour update partiel)
   UserModel copyWith({
@@ -119,3 +140,6 @@ class UserModel {
     );
   }
 }
+=======
+}
+>>>>>>> develop

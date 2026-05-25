@@ -1,30 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+<<<<<<< HEAD
+=======
+
+>>>>>>> develop
 import '../../models/user_model.dart';
 import '../../models/service_model.dart';
 import '../../services/user_service.dart';
 import '../../services/service_firestore.dart';
+import '../../widgets/rating_bar.dart';
+
 import '../services/service_detail_screen.dart';
 import '../chat/chat_screen.dart';
+import '../reviews/review_screen.dart';
 
 class PublicProfileScreen extends StatefulWidget {
   final String userId;
-  const PublicProfileScreen({super.key, required this.userId});
+
+  const PublicProfileScreen({
+    super.key,
+    required this.userId,
+  });
 
   @override
-  State<PublicProfileScreen> createState() => _PublicProfileScreenState();
+  State<PublicProfileScreen> createState() =>
+      _PublicProfileScreenState();
 }
 
-class _PublicProfileScreenState extends State<PublicProfileScreen> {
+class _PublicProfileScreenState
+    extends State<PublicProfileScreen> {
   final UserService _userService = UserService();
-  final ServiceFirestore _serviceFirestore = ServiceFirestore();
+
+  final ServiceFirestore _serviceFirestore =
+      ServiceFirestore();
 
   UserModel? _user;
+
   List<ServiceModel> _services = [];
+
   bool _isLoading = true;
 
-  static const Color primaryColor = Color(0xFF1D9E75);
+  static const Color primaryColor =
+      Color(0xFF1D9E75);
 
   @override
   void initState() {
@@ -32,11 +50,21 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     _loadProfile();
   }
 
+  // ─────────────────────────────────────────
+  // CHARGER PROFIL
+  // ─────────────────────────────────────────
   Future<void> _loadProfile() async {
     try {
-      final user = await _userService.getUserProfile(widget.userId);
-      final services = await _serviceFirestore.getUserServices(widget.userId);
-      final activeServices = services.where((s) => s.isActive).toList();
+      final user = await _userService
+          .getUserProfile(widget.userId);
+
+      final services =
+          await _serviceFirestore.getUserServices(
+        widget.userId,
+      );
+
+      final activeServices =
+          services.where((s) => s.isActive).toList();
 
       if (mounted) {
         setState(() {
@@ -46,39 +74,86 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      debugPrint(
+        '❌ Erreur chargement profil: $e',
+      );
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
+  // ─────────────────────────────────────────
+  // SIGNALER PROFIL
+  // ─────────────────────────────────────────
   Future<void> _signaler() async {
     final raison = await showDialog<String>(
       context: context,
       builder: (ctx) {
         String? selected;
+
         return StatefulBuilder(
           builder: (ctx, setD) => AlertDialog(
-            title: const Text('Signaler ce profil'),
+            title: const Text(
+              'Signaler ce profil',
+            ),
+
             content: DropdownButton<String>(
               value: selected,
               isExpanded: true,
-              hint: const Text('Choisir une raison'),
-              items: ['Spam', 'Contenu inapproprié', 'Fausse annonce', 'Autre']
-                  .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+              hint: const Text(
+                'Choisir une raison',
+              ),
+              items: [
+                'Spam',
+                'Contenu inapproprié',
+                'Fausse annonce',
+                'Autre',
+              ]
+                  .map(
+                    (r) => DropdownMenuItem(
+                      value: r,
+                      child: Text(r),
+                    ),
+                  )
                   .toList(),
-              onChanged: (v) => setD(() => selected = v),
+
+              onChanged: (v) {
+                setD(() {
+                  selected = v;
+                });
+              },
             ),
+
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Annuler'),
+                onPressed: () =>
+                    Navigator.pop(ctx),
+
+                child: const Text(
+                  'Annuler',
+                ),
               ),
+
               ElevatedButton(
                 onPressed: selected != null
-                    ? () => Navigator.pop(ctx, selected)
+                    ? () =>
+                        Navigator.pop(ctx, selected)
                     : null,
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                child: const Text('Signaler',
-                    style: TextStyle(color: Colors.white)),
+
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                ),
+
+                child: const Text(
+                  'Signaler',
+                  style: TextStyle(
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ],
           ),
@@ -86,17 +161,29 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       },
     );
 
+<<<<<<< HEAD
+=======
+    // ======================
+    // VERSION MISE À JOUR
+    // ======================
+>>>>>>> develop
     if (raison != null && mounted) {
-      await FirebaseFirestore.instance.collection('reports').add({
-        'reporterId': FirebaseAuth.instance.currentUser?.uid,
+      await FirebaseFirestore.instance
+          .collection('reports')
+          .add({
+        'reporterId':
+            FirebaseAuth.instance.currentUser?.uid,
         'targetId': widget.userId,
         'raison': raison,
-        'timestamp': FieldValue.serverTimestamp(),
+        'timestamp':
+            FieldValue.serverTimestamp(),
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Profil signalé. Merci.'),
+          content: Text(
+            'Profil signalé. Merci.',
+          ),
           backgroundColor: Colors.orange,
         ),
       );
@@ -107,226 +194,481 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: primaryColor)),
+        body: Center(
+          child: CircularProgressIndicator(
+            color: primaryColor,
+          ),
+        ),
       );
     }
 
     if (_user == null) {
       return const Scaffold(
-        body: Center(child: Text('Profil introuvable')),
+        body: Center(
+          child: Text(
+            'Profil introuvable',
+          ),
+        ),
       );
     }
 
-    final myUid = FirebaseAuth.instance.currentUser?.uid;
+    final myUid =
+        FirebaseAuth.instance.currentUser?.uid;
+
     final isMe = myUid == widget.userId;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
+
       appBar: AppBar(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         title: Text(_user!.nom),
+
         actions: [
           if (!isMe)
             PopupMenuButton<String>(
               onSelected: (v) {
-                if (v == 'signaler') _signaler();
+                if (v == 'signaler') {
+                  _signaler();
+                }
               },
+
               itemBuilder: (_) => [
                 const PopupMenuItem(
                   value: 'signaler',
-                  child: Text('Signaler ce profil'),
+                  child: Text(
+                    'Signaler ce profil',
+                  ),
                 ),
               ],
             ),
         ],
       ),
+
       body: SingleChildScrollView(
         child: Column(
           children: [
+<<<<<<< HEAD
             // En-tête profil
+=======
+            // ─────────────────────
+            // HEADER PROFIL
+            // ─────────────────────
+>>>>>>> develop
             Container(
               width: double.infinity,
               color: primaryColor,
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+              padding:
+                  const EdgeInsets.fromLTRB(
+                20,
+                16,
+                20,
+                28,
+              ),
+
               child: Column(
                 children: [
                   CircleAvatar(
                     radius: 50,
                     backgroundColor: Colors.white,
-                    backgroundImage: _user!.photoUrl.isNotEmpty
-                        ? NetworkImage(_user!.photoUrl)
-                        : null,
-                    child: _user!.photoUrl.isEmpty
-                        ? Text(
-                            _user!.nom.isNotEmpty
-                                ? _user!.nom[0].toUpperCase()
-                                : '?',
-                            style: const TextStyle(
-                              fontSize: 36,
-                              color: primaryColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          )
-                        : null,
+
+                    backgroundImage:
+                        _user!.photoUrl.isNotEmpty
+                            ? NetworkImage(
+                                _user!.photoUrl,
+                              )
+                            : null,
+
+                    child:
+                        _user!.photoUrl.isEmpty
+                            ? Text(
+                                _user!
+                                        .nom
+                                        .isNotEmpty
+                                    ? _user!
+                                        .nom[0]
+                                        .toUpperCase()
+                                    : '?',
+
+                                style:
+                                    const TextStyle(
+                                  fontSize: 36,
+                                  color:
+                                      primaryColor,
+                                  fontWeight:
+                                      FontWeight
+                                          .bold,
+                                ),
+                              )
+                            : null,
                   ),
+
                   const SizedBox(height: 12),
+
                   Text(
                     _user!.nom,
+
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 22,
-                      fontWeight: FontWeight.bold,
+                      fontWeight:
+                          FontWeight.bold,
                     ),
                   ),
-                  if (_user!.isPro && _user!.categorie.isNotEmpty) ...[
+
+                  if (_user!.isPro &&
+                      _user!
+                          .categorie
+                          .isNotEmpty) ...[
                     const SizedBox(height: 6),
+
                     Container(
+<<<<<<< HEAD
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.2), // ← Corrigé
                         borderRadius: BorderRadius.circular(20),
+=======
+                      padding:
+                          const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+>>>>>>> develop
                       ),
+
+                      decoration: BoxDecoration(
+                        color: Colors.white
+                            .withOpacity(0.2),
+
+                        borderRadius:
+                            BorderRadius.circular(
+                          20,
+                        ),
+                      ),
+
                       child: Text(
                         _user!.categorie,
+
                         style: const TextStyle(
-                            color: Colors.white, fontSize: 13),
+                          color: Colors.white,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
+
                   if (_user!.ville.isNotEmpty) ...[
                     const SizedBox(height: 6),
+
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisAlignment:
+                          MainAxisAlignment
+                              .center,
+
                       children: [
-                        const Icon(Icons.location_on,
-                            color: Colors.white70, size: 14),
+                        const Icon(
+                          Icons.location_on,
+                          color: Colors.white70,
+                          size: 14,
+                        ),
+
                         const SizedBox(width: 4),
+
                         Text(
                           _user!.ville,
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 13),
+
+                          style:
+                              const TextStyle(
+                            color:
+                                Colors.white70,
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ),
                   ],
+
+                  if (_user!.reviewCount > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: RatingBar(
+                        rating: _user!.rating,
+                        count: _user!.reviewCount,
+                        size: 18,
+                      ),
+                    ),
+
                   if (_user!.createdAt != null) ...[
                     const SizedBox(height: 4),
+
                     Text(
                       'Membre depuis ${_formatDate(_user!.createdAt!)}',
+
                       style: const TextStyle(
-                          color: Colors.white60, fontSize: 12),
+                        color: Colors.white60,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ],
               ),
             ),
 
-            // Stats
+            // ─────────────────────
+            // STATS
+            // ─────────────────────
             Container(
               color: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding:
+                  const EdgeInsets.symmetric(
+                vertical: 16,
+              ),
+
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                mainAxisAlignment:
+                    MainAxisAlignment
+                        .spaceEvenly,
+
                 children: [
-                  _statItem('${_services.length}', 'Annonces actives'),
+                  _statItem(
+                    '${_services.length}',
+                    'Annonces actives',
+                  ),
                 ],
               ),
             ),
 
-            // Bio
+            // ─────────────────────
+            // BIO
+            // ─────────────────────
             if (_user!.bio.isNotEmpty)
               Container(
                 width: double.infinity,
-                margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                padding: const EdgeInsets.all(16),
+
+                margin:
+                    const EdgeInsets.fromLTRB(
+                  16,
+                  12,
+                  16,
+                  0,
+                ),
+
+                padding:
+                    const EdgeInsets.all(16),
+
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+
+                  borderRadius:
+                      BorderRadius.circular(
+                    12,
+                  ),
                 ),
+
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+
                   children: [
                     const Text(
                       'À propos',
+
                       style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16),
+                        fontWeight:
+                            FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
+
                     const SizedBox(height: 8),
+
                     Text(
                       _user!.bio,
+
                       style: const TextStyle(
-                          color: Colors.black87, height: 1.5),
+                        color: Colors.black87,
+                        height: 1.5,
+                      ),
                     ),
                   ],
                 ),
               ),
 
-            // Bouton contacter
+            // ─────────────────────
+            // BOUTON MESSAGE
+            // ─────────────────────
             if (!isMe)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                padding:
+                    const EdgeInsets.fromLTRB(
+                  16,
+                  16,
+                  16,
+                  0,
+                ),
+
                 child: SizedBox(
                   width: double.infinity,
+
                   child: ElevatedButton.icon(
-                    onPressed: () => Navigator.push(
+                    onPressed: () =>
+                        Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => ChatScreen(otherUser: _user!),
+                        builder: (_) =>
+                            ChatScreen(
+                          otherUser: _user!,
+                        ),
                       ),
                     ),
-                    icon: const Icon(Icons.message_outlined,
-                        color: Colors.white),
-                    label: const Text('Envoyer un message',
-                        style: TextStyle(color: Colors.white)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+
+                    icon: const Icon(
+                      Icons.message_outlined,
+                      color: Colors.white,
+                    ),
+
+                    label: const Text(
+                      'Envoyer un message',
+
+                      style: TextStyle(
+                        color: Colors.white,
+                      ),
+                    ),
+
+                    style:
+                        ElevatedButton.styleFrom(
+                      backgroundColor:
+                          primaryColor,
+
+                      padding:
+                          const EdgeInsets.symmetric(
+                        vertical: 14,
+                      ),
+
+                      shape:
+                          RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(
+                          12,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
 
-            // Annonces
+            if (!isMe)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ReviewScreen(targetUser: _user!),
+                      ),
+                    ),
+                    icon: const Icon(
+                      Icons.star_outline_rounded,
+                      color: primaryColor,
+                    ),
+                    label: const Text(
+                      'Laisser un avis',
+                      style: TextStyle(color: primaryColor),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: primaryColor),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // ─────────────────────
+            // TITRE ANNONCES
+            // ─────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+              padding:
+                  const EdgeInsets.fromLTRB(
+                16,
+                20,
+                16,
+                8,
+              ),
+
               child: Row(
                 children: [
                   const Text(
                     'Ses annonces',
+
                     style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 18),
+                      fontWeight:
+                          FontWeight.bold,
+                      fontSize: 18,
+                    ),
                   ),
+
                   const Spacer(),
+
                   Text(
                     '${_services.length}',
-                    style: const TextStyle(color: Colors.grey),
+
+                    style: const TextStyle(
+                      color: Colors.grey,
+                    ),
                   ),
                 ],
               ),
             ),
 
+            // ─────────────────────
+            // LISTE SERVICES
+            // ─────────────────────
             if (_services.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(32),
+
                 child: Column(
                   children: [
-                    Icon(Icons.storefront_outlined,
-                        size: 48, color: Colors.grey),
+                    Icon(
+                      Icons.storefront_outlined,
+                      size: 48,
+                      color: Colors.grey,
+                    ),
+
                     SizedBox(height: 8),
-                    Text('Aucune annonce publiée',
-                        style: TextStyle(color: Colors.grey)),
+
+                    Text(
+                      'Aucune annonce publiée',
+
+                      style: TextStyle(
+                        color: Colors.grey,
+                      ),
+                    ),
                   ],
                 ),
               )
             else
               GridView.builder(
                 shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+
+                physics:
+                    const NeverScrollableScrollPhysics(),
+
+                padding:
+                    const EdgeInsets.fromLTRB(
+                  16,
+                  0,
+                  16,
+                  24,
+                ),
+
                 gridDelegate:
                     const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
@@ -334,8 +676,13 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   mainAxisSpacing: 10,
                   childAspectRatio: 0.85,
                 ),
+
                 itemCount: _services.length,
-                itemBuilder: (_, i) => _buildServiceTile(_services[i]),
+
+                itemBuilder: (_, i) =>
+                    _buildServiceTile(
+                  _services[i],
+                ),
               ),
           ],
         ),
@@ -343,80 +690,145 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     );
   }
 
+<<<<<<< HEAD
   Widget _statItem(String value, String label) {
+=======
+  // ─────────────────────────────────────────
+  // ITEM STAT
+  // ─────────────────────────────────────────
+  Widget _statItem(
+    String value,
+    String label,
+  ) {
+>>>>>>> develop
     return Column(
       children: [
         Text(
           value,
+
           style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: primaryColor),
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: primaryColor,
+          ),
         ),
+
         const SizedBox(height: 2),
-        Text(label,
-            style: const TextStyle(color: Colors.grey, fontSize: 12)),
+
+        Text(
+          label,
+
+          style: const TextStyle(
+            color: Colors.grey,
+            fontSize: 12,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildServiceTile(ServiceModel service) {
+  // ─────────────────────────────────────────
+  // TILE SERVICE
+  // ─────────────────────────────────────────
+  Widget _buildServiceTile(
+    ServiceModel service,
+  ) {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ServiceDetailScreen(service: service),
+          builder: (_) =>
+              ServiceDetailScreen(
+            service: service,
+          ),
         ),
       ),
+
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+
+          borderRadius:
+              BorderRadius.circular(12),
+
           boxShadow: [
             BoxShadow(
+<<<<<<< HEAD
               color: Colors.black.withValues(alpha: 0.06), // ← Corrigé
+=======
+              color:
+                  Colors.black.withOpacity(
+                0.06,
+              ),
+>>>>>>> develop
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
           ],
         ),
+
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
+
           children: [
             ClipRRect(
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
+                  const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
+
               child: service.photos.isNotEmpty
                   ? Image.network(
                       service.photos.first,
                       height: 100,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _photoPlaceholder(),
+
+                      errorBuilder:
+                          (_, __, ___) =>
+                              _photoPlaceholder(),
                     )
                   : _photoPlaceholder(),
             ),
+
             Padding(
-              padding: const EdgeInsets.all(8),
+              padding:
+                  const EdgeInsets.all(8),
+
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+
                 children: [
                   Text(
                     service.titre,
+
                     style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 13),
+                      fontWeight:
+                          FontWeight.bold,
+                      fontSize: 13,
+                    ),
+
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+
+                    overflow:
+                        TextOverflow.ellipsis,
                   ),
+
                   const SizedBox(height: 4),
+
                   Text(
                     service.prix > 0
                         ? '${service.prix.toStringAsFixed(0)} FCFA'
                         : 'Négociable',
+
                     style: const TextStyle(
-                        color: primaryColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12),
+                      color: primaryColor,
+                      fontWeight:
+                          FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -427,21 +839,43 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     );
   }
 
+  // ─────────────────────────────────────────
+  // PLACEHOLDER IMAGE
+  // ─────────────────────────────────────────
   Widget _photoPlaceholder() {
     return Container(
       height: 100,
       width: double.infinity,
       color: const Color(0xFFE8F5F0),
-      child: const Icon(Icons.image_outlined,
-          color: primaryColor, size: 32),
+
+      child: const Icon(
+        Icons.image_outlined,
+        color: primaryColor,
+        size: 32,
+      ),
     );
   }
 
+  // ─────────────────────────────────────────
+  // FORMAT DATE
+  // ─────────────────────────────────────────
   String _formatDate(DateTime dt) {
     const mois = [
-      '', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-      'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+      '',
+      'janvier',
+      'février',
+      'mars',
+      'avril',
+      'mai',
+      'juin',
+      'juillet',
+      'août',
+      'septembre',
+      'octobre',
+      'novembre',
+      'décembre',
     ];
+
     return '${mois[dt.month]} ${dt.year}';
   }
 }
