@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../services/location_service.dart';
 import '../../models/user_model.dart';
-
+import 'dart:ui' as ui;
 // ─────────────────────────────────────────────────
 // THÈME
 // ─────────────────────────────────────────────────
@@ -701,7 +701,7 @@ class _TrianglePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = color;
-    final path = Path()
+    final path = ui.Path()
       ..moveTo(0, 0)
       ..lineTo(size.width, 0)
       ..lineTo(size.width / 2, size.height)
