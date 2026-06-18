@@ -148,7 +148,7 @@ class NotificationService {
           _showLocalNotification(
             title:
                 notification.title ??
-                'ProxiMarket',
+                'MitaAn',
             body: notification.body ?? '',
             payload:
                 message.data['chatId'] ?? '',

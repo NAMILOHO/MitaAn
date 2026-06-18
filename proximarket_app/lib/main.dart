@@ -111,7 +111,7 @@ class MyApp extends StatelessWidget {
               child: MaterialApp(
                 navigatorKey: navigatorKey,
                 debugShowCheckedModeBanner: false,
-                title: 'ProxiMarket',
+                title: 'MitaAn',
                 theme: ThemeData(
                   useMaterial3: true,
                   colorScheme: ColorScheme.fromSeed(
