@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../core/errors/app_exception.dart';
+import '../core/errors/error_mapper.dart';
 import '../models/user_model.dart';
 
 class AuthService {
@@ -40,14 +42,16 @@ class AuthService {
         createdAt: DateTime.now(),
       );
 
-      await _firestore
-          .collection('users')
-          .doc(uid)
-          .set({...newUser.toMap(), 'createdAt': FieldValue.serverTimestamp()});
+      await _firestore.collection('users').doc(uid).set({
+        ...newUser.toMap(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
       return newUser;
     } on FirebaseAuthException catch (e) {
-      throw _handleAuthError(e.code);
+      throw AuthException.fromFirebaseCode(e.code);
+    } catch (e) {
+      throw ErrorMapper.map(e);
     }
   }
 
@@ -67,7 +71,9 @@ class AuthService {
       final uid = credential.user!.uid;
       return await _getUserFromFirestore(uid);
     } on FirebaseAuthException catch (e) {
-      throw _handleAuthError(e.code);
+      throw AuthException.fromFirebaseCode(e.code);
+    } catch (e) {
+      throw ErrorMapper.map(e);
     }
   }
 
@@ -103,15 +109,23 @@ class AuthService {
           createdAt: DateTime.now(),
         );
 
-        await _firestore.collection('users').doc(uid).set(
-            {...newUser.toMap(), 'createdAt': FieldValue.serverTimestamp()});
+        await _firestore.collection('users').doc(uid).set({
+          ...newUser.toMap(),
+          'createdAt': FieldValue.serverTimestamp(),
+        });
 
         return newUser;
       }
 
       return UserModel.fromMap(doc.data()!, uid);
+    } on FirebaseAuthException catch (e) {
+      throw AuthException.fromFirebaseCode(e.code);
     } catch (e) {
-      throw 'Erreur lors de la connexion Google';
+      throw AuthException(
+        'google-sign-in-failed',
+        'Erreur lors de la connexion Google',
+        e,
+      );
     }
   }
 
@@ -120,7 +134,7 @@ class AuthService {
   // ─────────────────────────────────────────
   Future<void> signOut() async {
     await _googleSignIn.signOut(); // déconnecte Google
-    await _auth.signOut();         // déconnecte Firebase
+    await _auth.signOut(); // déconnecte Firebase
   }
 
   // ─────────────────────────────────────────
@@ -132,29 +146,5 @@ class AuthService {
       return UserModel.fromMap(doc.data()!, uid);
     }
     return null;
-  }
-
-  // ─────────────────────────────────────────
-  // GESTION DES ERREURS EN FRANÇAIS
-  // ─────────────────────────────────────────
-  String _handleAuthError(String code) {
-    switch (code) {
-      case 'email-already-in-use':
-        return 'Cet email est déjà utilisé';
-      case 'wrong-password':
-        return 'Mot de passe incorrect';
-      case 'user-not-found':
-        return 'Aucun compte avec cet email';
-      case 'invalid-email':
-        return 'Adresse email invalide';
-      case 'weak-password':
-        return 'Le mot de passe est trop faible (minimum 6 caractères)';
-      case 'network-request-failed':
-        return 'Pas de connexion internet';
-      case 'too-many-requests':
-        return 'Trop de tentatives. Réessayez plus tard';
-      default:
-        return 'Une erreur est survenue. Réessayez';
-    }
   }
 }
