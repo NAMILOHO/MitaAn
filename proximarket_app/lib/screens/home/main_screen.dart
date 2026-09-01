@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'home/home_screen.dart';
-import 'map/map_screen.dart';
-import 'services/create_service_screen.dart';
-import 'profile/profile_screen.dart';
+import '../map/map_screen.dart';
+import '../profile/profile_screen.dart';
+import '../services/create_service_screen.dart';
+import 'home_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -24,10 +24,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         selectedItemColor: const Color(0xFF1D9E75),

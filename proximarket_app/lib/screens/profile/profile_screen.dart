@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 
 import '../../models/user_model.dart';
 import '../../services/user_service.dart';
@@ -12,20 +11,20 @@ import 'edit_profile_screen.dart';
 import '../services/my_services_screen.dart';
 import 'favorites_screen.dart';
 import '../auth/login_screen.dart';
-import '../debug/debug_screen.dart';
+import 'location_settings_screen.dart';
 
 // ─────────────────────────────────────────────────
 // THÈME
 // ─────────────────────────────────────────────────
 class _T {
-  static const primary      = Color(0xFF1D9E75);
+  static const primary = Color(0xFF1D9E75);
   static const primaryLight = Color(0xFFE1F5EE);
-  static const primaryDark  = Color(0xFF085041);
-  static const bg           = Color(0xFFF8F9FA);
-  static const textPrimary  = Color(0xFF0D1117);
-  static const textSecondary= Color(0xFF6B7280);
+  static const primaryDark = Color(0xFF085041);
+  static const bg = Color(0xFFF8F9FA);
+  static const textPrimary = Color(0xFF0D1117);
+  static const textSecondary = Color(0xFF6B7280);
   static const textTertiary = Color(0xFFB0B7C3);
-  static const border       = Color(0xFFEEEEF2);
+  static const border = Color(0xFFEEEEF2);
 }
 
 // ─────────────────────────────────────────────────
@@ -43,11 +42,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   UserModel? _userModel;
   bool _isLoading = true;
   bool _isUploadingPhoto = false;
-  
+
   // Variables fallbacks au cas où les streams tardent à s'initialiser
   int _servicesCount = 0;
   int _favoritesCount = 0;
-  
+
   // Streams pour le temps réel
   Stream<int>? _favoritesStream;
   Stream<int>? _servicesStream;
@@ -87,7 +86,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadProfile() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) { if (mounted) setState(() => _isLoading = false); return; }
+    if (uid == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
 
     try {
       final user = await _userService.getUserProfile(uid);
@@ -127,7 +129,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ...newUser.toMap(),
         'createdAt': FieldValue.serverTimestamp(),
       });
-      if (mounted) setState(() { _userModel = newUser; _isLoading = false; });
+      if (mounted) {
+        setState(() {
+          _userModel = newUser;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -146,20 +153,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 36, height: 4,
-              decoration: BoxDecoration(color: _T.border, borderRadius: BorderRadius.circular(2)),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: _T.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
             const SizedBox(height: 16),
             const Text(
               'Changer la photo',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _T.textPrimary),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: _T.textPrimary,
+              ),
             ),
             const SizedBox(height: 20),
             Row(
               children: [
-                Expanded(child: _photoOption(Icons.camera_alt_rounded, 'Caméra', ImageSource.camera)),
+                Expanded(
+                  child: _photoOption(
+                    Icons.camera_alt_rounded,
+                    'Caméra',
+                    ImageSource.camera,
+                  ),
+                ),
                 const SizedBox(width: 12),
-                Expanded(child: _photoOption(Icons.photo_library_rounded, 'Galerie', ImageSource.gallery)),
+                Expanded(
+                  child: _photoOption(
+                    Icons.photo_library_rounded,
+                    'Galerie',
+                    ImageSource.gallery,
+                  ),
+                ),
               ],
             ),
           ],
@@ -170,7 +197,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _photoOption(IconData icon, String label, ImageSource source) {
     return GestureDetector(
-      onTap: () { Navigator.pop(context); _changePhoto(source); },
+      onTap: () {
+        Navigator.pop(context);
+        _changePhoto(source);
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
@@ -182,7 +212,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Icon(icon, color: _T.primary, size: 26),
             const SizedBox(height: 8),
-            Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: _T.textPrimary)),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: _T.textPrimary,
+              ),
+            ),
           ],
         ),
       ),
@@ -195,7 +232,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _isUploadingPhoto = true);
     try {
       final url = await _userService.changeProfilePhoto(uid, source);
-      if (url == null) { if (mounted) setState(() => _isUploadingPhoto = false); return; }
+      if (url == null) {
+        if (mounted) setState(() => _isUploadingPhoto = false);
+        return;
+      }
       await _loadProfile();
       _snack('Photo de profil mise à jour', _T.primary);
     } catch (e) {
@@ -225,7 +265,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: _T.bg,
-        body: Center(child: CircularProgressIndicator(color: _T.primary, strokeWidth: 2)),
+        body: Center(
+          child: CircularProgressIndicator(color: _T.primary, strokeWidth: 2),
+        ),
       );
     }
     if (_userModel == null) {
@@ -252,10 +294,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ── HEADER VERT ──
   Widget _buildHeader() {
-    final nom      = _userModel!.nom;
-    final email    = _userModel!.email;
+    final nom = _userModel!.nom;
+    final email = _userModel!.email;
     final photoUrl = _userModel!.photoUrl;
-    final initial  = nom.isNotEmpty ? nom[0].toUpperCase() : 'U';
+    final initial = nom.isNotEmpty ? nom[0].toUpperCase() : 'U';
 
     return SliverAppBar(
       expandedHeight: 240,
@@ -277,12 +319,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               );
             },
             child: Container(
-              width: 36, height: 36,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.logout_rounded, color: Colors.white, size: 18),
+              child: const Icon(
+                Icons.logout_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
             ),
           ),
         ),
@@ -306,9 +353,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: Colors.white,
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 2.5),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.4),
+                            width: 2.5,
+                          ),
                           image: photoUrl.isNotEmpty
-                              ? DecorationImage(image: NetworkImage(photoUrl), fit: BoxFit.cover)
+                              ? DecorationImage(
+                                  image: NetworkImage(photoUrl),
+                                  fit: BoxFit.cover,
+                                )
                               : null,
                         ),
                         child: photoUrl.isEmpty
@@ -332,21 +385,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               color: Colors.black.withValues(alpha: 0.4),
                             ),
                             child: const Center(
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
                             ),
                           ),
                         )
                       else
                         Positioned(
-                          bottom: 0, right: 0,
+                          bottom: 0,
+                          right: 0,
                           child: Container(
-                            width: 24, height: 24,
+                            width: 24,
+                            height: 24,
                             decoration: BoxDecoration(
                               color: Colors.white,
                               shape: BoxShape.circle,
                               border: Border.all(color: _T.primary, width: 1.5),
                             ),
-                            child: const Icon(Icons.camera_alt_rounded, size: 13, color: _T.primary),
+                            child: const Icon(
+                              Icons.camera_alt_rounded,
+                              size: 13,
+                              color: _T.primary,
+                            ),
                           ),
                         ),
                     ],
@@ -372,7 +434,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 if (_userModel!.isPro && _userModel!.categorie.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(20),
@@ -388,11 +453,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.location_on_rounded, size: 13, color: Colors.white70),
+                      const Icon(
+                        Icons.location_on_rounded,
+                        size: 13,
+                        color: Colors.white70,
+                      ),
                       const SizedBox(width: 3),
                       Text(
                         _userModel!.ville.split(',').first,
-                        style: const TextStyle(fontSize: 12, color: Colors.white70),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white70,
+                        ),
                       ),
                     ],
                   ),
@@ -452,7 +524,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
           _statDivider(),
-          
+
           // 2. Compteur Favoris en temps réel
           StreamBuilder<int>(
             stream: _favoritesStream,
@@ -462,7 +534,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
           _statDivider(),
-          
+
           // 3. Messages (Toujours statique à 0 pour l'instant)
           _statItem('0', 'Messages'),
         ],
@@ -492,11 +564,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _statDivider() => Container(
-    width: 0.5,
-    height: 36,
-    color: _T.border,
-  );
+  Widget _statDivider() => Container(width: 0.5, height: 36, color: _T.border);
 
   Widget _buildBioCard() {
     return Container(
@@ -512,12 +580,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           const Text(
             'Bio',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _T.textPrimary),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: _T.textPrimary,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             _userModel!.bio,
-            style: const TextStyle(fontSize: 13, color: _T.textSecondary, height: 1.5),
+            style: const TextStyle(
+              fontSize: 13,
+              color: _T.textSecondary,
+              height: 1.5,
+            ),
           ),
         ],
       ),
@@ -560,29 +636,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
             iconBg: const Color(0xFFE6F1FB),
             iconColor: const Color(0xFF185FA5),
             label: 'Modifier le profil',
-            last: !kDebugMode,
             onTap: () async {
               final updated = await Navigator.push<bool>(
                 context,
-                MaterialPageRoute(builder: (_) => EditProfileScreen(user: _userModel!)),
+                MaterialPageRoute(
+                  builder: (_) => EditProfileScreen(user: _userModel!),
+                ),
               );
               if (updated == true && mounted) await _loadProfile();
             },
           ),
-          if (kDebugMode) ...[
-            _menuDivider(),
-            _menuItem(
-              icon: Icons.bug_report_outlined,
-              iconBg: const Color(0xFFFFF3E0),
-              iconColor: Colors.orange,
-              label: 'Debug (interne)',
-              last: true,
-              onTap: () => Navigator.push(
+          _menuDivider(),
+          _menuItem(
+            icon: Icons.my_location_rounded,
+            iconBg: const Color(0xFFE1F5EE),
+            iconColor: const Color(0xFF1D9E75),
+            label: 'Visibilité & Localisation',
+            last: true,
+            onTap: () async {
+              final mode = _userModel?.locationMode ?? 'off';
+              await Navigator.push<bool>(
                 context,
-                MaterialPageRoute(builder: (_) => const DebugScreen()),
-              ),
-            ),
-          ],
+                MaterialPageRoute(
+                  builder: (_) => LocationSettingsScreen(currentMode: mode),
+                ),
+              );
+              if (mounted) await _loadProfile();
+            },
+          ),
         ],
       ),
     );
@@ -605,7 +686,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(
               width: 36,
               height: 36,
-              decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
               child: Icon(icon, color: iconColor, size: 18),
             ),
             const SizedBox(width: 12),
@@ -618,7 +702,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const Spacer(),
-            const Icon(Icons.chevron_right_rounded, size: 20, color: _T.textTertiary),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: _T.textTertiary,
+            ),
           ],
         ),
       ),

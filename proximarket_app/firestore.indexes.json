@@ -72,6 +72,14 @@
         { "fieldPath": "isPro", "order": "ASCENDING" },
         { "fieldPath": "gpsLat", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isPro", "order": "ASCENDING" },
+        { "fieldPath": "locationMode", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

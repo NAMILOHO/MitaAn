@@ -4,21 +4,22 @@ import 'package:latlong2/latlong.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../services/location_service.dart';
-import '../../models/user_model.dart';
+import '../../services/live_location_service.dart';
 import 'dart:ui' as ui;
+
 // ─────────────────────────────────────────────────
 // THÈME
 // ─────────────────────────────────────────────────
 class _T {
-  static const primary      = Color(0xFF1D9E75);
+  static const primary = Color(0xFF1D9E75);
   static const primaryLight = Color(0xFFE1F5EE);
-  static const primaryDark  = Color(0xFF085041);
-  static const bg           = Color(0xFFF8F9FA);
-  static const textPrimary  = Color(0xFF0D1117);
-  static const textSecondary= Color(0xFF6B7280);
+  static const primaryDark = Color(0xFF085041);
+  static const bg = Color(0xFFF8F9FA);
+  static const textPrimary = Color(0xFF0D1117);
+  static const textSecondary = Color(0xFF6B7280);
   static const textTertiary = Color(0xFFB0B7C3);
-  static const border       = Color(0xFFEEEEF2);
-  static const meColor      = Color(0xFF185FA5);
+  static const border = Color(0xFFEEEEF2);
+  static const meColor = Color(0xFF185FA5);
 
   static const avatarColors = [
     [Color(0xFFE1F5EE), Color(0xFF085041)],
@@ -46,22 +47,30 @@ class _MapScreenState extends State<MapScreen> {
   static const LatLng _defaultPosition = LatLng(5.3600, -4.0083);
 
   final LocationService _locationService = LocationService();
+  final LiveLocationService _liveLocationService = LiveLocationService();
   final MapController _mapController = MapController();
 
   LatLng? _userPosition;
-  List<UserModel> _pros = [];
+  Stream<List<Map<String, dynamic>>>? _prosStream;
   bool _isLoading = true;
   String? _errorMessage;
 
   double _radiusKm = 20.0;
   String? _selectedCategorie;
-  UserModel? _selectedPro;
+  Map<String, dynamic>? _selectedProMap;
 
   static const List<double> _rayonOptions = [5, 10, 20, 50];
 
   static const List<String> _categories = [
-    'Tous', 'Artisan', 'Artiste', 'Éleveur',
-    'Commerçant', 'Plombier', 'Électricien', 'Menuisier', 'Autre',
+    'Tous',
+    'Artisan',
+    'Artiste',
+    'Éleveur',
+    'Commerçant',
+    'Plombier',
+    'Électricien',
+    'Menuisier',
+    'Autre',
   ];
 
   @override
@@ -71,36 +80,44 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _initMap() async {
-    setState(() { _isLoading = true; _errorMessage = null; });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+      _selectedProMap = null;
+    });
     try {
       final position = await _locationService.getCurrentPosition();
       _userPosition = LatLng(position.latitude, position.longitude);
-      await _loadPros();
-    } catch (e) {
-      if (mounted) setState(() => _errorMessage = e.toString());
-    } finally {
+      _configureProsStream();
       if (mounted) setState(() => _isLoading = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  Future<void> _loadPros() async {
+  void _configureProsStream() {
     if (_userPosition == null) return;
-    try {
-      final pros = await _locationService.getNearbyPros(
-        myLat: _userPosition!.latitude,
-        myLng: _userPosition!.longitude,
-        radiusKm: _radiusKm,
-        categorieFilter: _selectedCategorie == 'Tous' ? null : _selectedCategorie,
-      );
-      final myUid = FirebaseAuth.instance.currentUser?.uid;
-      if (mounted) {
-        setState(() {
-          _pros = pros.where((u) => u.uid != myUid).toList();
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _errorMessage = e.toString());
-    }
+    final myUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    _prosStream = _liveLocationService
+        .getVisiblePros(
+          myLat: _userPosition!.latitude,
+          myLng: _userPosition!.longitude,
+          radiusKm: _radiusKm,
+        )
+        .map(
+          (pros) => pros.where((pro) {
+            if (pro['id'] == myUid) return false;
+            if (_selectedCategorie == null || _selectedCategorie == 'Tous') {
+              return true;
+            }
+            return pro['categorie'] == _selectedCategorie;
+          }).toList(),
+        );
   }
 
   void _recenter() {
@@ -116,63 +133,165 @@ class _MapScreenState extends State<MapScreen> {
     return 10;
   }
 
-  List<Marker> _buildMarkers() {
+  List<Marker> _buildMarkersFromMaps(List<Map<String, dynamic>> pros) {
     final markers = <Marker>[];
 
     // Marker utilisateur
     if (_userPosition != null) {
-      markers.add(Marker(
-        point: _userPosition!,
-        width: 20,
-        height: 20,
-        child: Container(
-          decoration: BoxDecoration(
-            color: _T.meColor,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 3),
+      markers.add(
+        Marker(
+          point: _userPosition!,
+          width: 20,
+          height: 20,
+          child: Container(
+            decoration: BoxDecoration(
+              color: _T.meColor,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
+            ),
           ),
         ),
-      ));
+      );
     }
 
-    // Markers prestataires
-    for (final pro in _pros) {
-      markers.add(Marker(
-        point: LatLng(pro.gpsLat, pro.gpsLng),
-        width: 120,
-        height: 52,
-        child: GestureDetector(
-          onTap: () => setState(() => _selectedPro = pro),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _T.primary,
-                  borderRadius: BorderRadius.circular(8),
+    for (final pro in pros) {
+      final mode = pro['locationMode'] as String? ?? 'off';
+      final lat = _markerLat(pro);
+      final lng = _markerLng(pro);
+      if (lat == 0.0 && lng == 0.0) continue;
+
+      final nom = pro['nom'] as String? ?? '?';
+      final color = _modeColor(mode);
+      final icon = _modeIcon(mode);
+      final isLive = _isLiveMode(mode);
+
+      markers.add(
+        Marker(
+          point: LatLng(lat, lng),
+          width: 130,
+          height: 60,
+          child: GestureDetector(
+            onTap: () => setState(() => _selectedProMap = pro),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(icon, color: Colors.white, size: 12),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              nom.split(' ').first,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isLive)
+                      Positioned(
+                        top: -2,
+                        right: -2,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                child: Text(
-                  pro.nom.split(' ').first,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+                CustomPaint(
+                  size: const Size(10, 6),
+                  painter: _TrianglePainter(color),
                 ),
-              ),
-              CustomPaint(
-                size: const Size(10, 6),
-                painter: _TrianglePainter(_T.primary),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ));
+      );
     }
 
     return markers;
+  }
+
+  double _markerLat(Map<String, dynamic> pro) {
+    final mode = pro['locationMode'] as String? ?? 'off';
+    if (mode == 'fixed') return _doubleFrom(pro['fixedLat']);
+    return _doubleFrom(pro['gpsLat']);
+  }
+
+  double _markerLng(Map<String, dynamic> pro) {
+    final mode = pro['locationMode'] as String? ?? 'off';
+    if (mode == 'fixed') return _doubleFrom(pro['fixedLng']);
+    return _doubleFrom(pro['gpsLng']);
+  }
+
+  double _doubleFrom(dynamic value) {
+    if (value is num) return value.toDouble();
+    return 0.0;
+  }
+
+  Color _modeColor(String mode) {
+    switch (mode) {
+      case 'fixed':
+        return const Color(0xFF1D9E75);
+      case 'service':
+        return const Color(0xFF185FA5);
+      case 'meeting':
+        return const Color(0xFFBA7517);
+      case 'delivery':
+        return const Color(0xFF993556);
+      case 'mobileSeller':
+        return const Color(0xFF7B4A1E);
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _modeIcon(String mode) {
+    switch (mode) {
+      case 'fixed':
+        return Icons.store_rounded;
+      case 'service':
+        return Icons.build_rounded;
+      case 'meeting':
+        return Icons.handshake_rounded;
+      case 'delivery':
+        return Icons.delivery_dining_rounded;
+      case 'mobileSeller':
+        return Icons.directions_walk_rounded;
+      default:
+        return Icons.location_on_rounded;
+    }
+  }
+
+  bool _isLiveMode(String mode) {
+    return mode == 'service' ||
+        mode == 'meeting' ||
+        mode == 'delivery' ||
+        mode == 'mobileSeller';
   }
 
   @override
@@ -187,19 +306,13 @@ class _MapScreenState extends State<MapScreen> {
             child: _isLoading
                 ? const Center(
                     child: CircularProgressIndicator(
-                      color: _T.primary, strokeWidth: 2,
+                      color: _T.primary,
+                      strokeWidth: 2,
                     ),
                   )
                 : _errorMessage != null
-                    ? _buildError()
-                    : Stack(
-                        children: [
-                          _buildMap(),
-                          _buildCounter(),
-                          _buildFAB(),
-                          if (_selectedPro != null) _buildBottomSheet(),
-                        ],
-                      ),
+                ? _buildError()
+                : _buildMap(),
           ),
         ],
       ),
@@ -212,7 +325,9 @@ class _MapScreenState extends State<MapScreen> {
       color: Colors.white,
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + 8,
-        left: 20, right: 20, bottom: 0,
+        left: 20,
+        right: 20,
+        bottom: 0,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,17 +362,28 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Widget _iconBtn({required IconData icon, bool active = false, VoidCallback? onTap}) {
+  Widget _iconBtn({
+    required IconData icon,
+    bool active = false,
+    VoidCallback? onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 36, height: 36,
+        width: 36,
+        height: 36,
         decoration: BoxDecoration(
           color: active ? _T.primaryLight : _T.bg,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: active ? const Color(0xFF9FE1CB) : _T.border),
+          border: Border.all(
+            color: active ? const Color(0xFF9FE1CB) : _T.border,
+          ),
         ),
-        child: Icon(icon, size: 18, color: active ? _T.primary : _T.textSecondary),
+        child: Icon(
+          icon,
+          size: 18,
+          color: active ? _T.primary : _T.textSecondary,
+        ),
       ),
     );
   }
@@ -275,13 +401,19 @@ class _MapScreenState extends State<MapScreen> {
             final sel = _radiusKm == r;
             return GestureDetector(
               onTap: () {
-                setState(() => _radiusKm = r);
-                _loadPros();
+                setState(() {
+                  _radiusKm = r;
+                  _selectedProMap = null;
+                  _configureProsStream();
+                });
                 _recenter();
               },
               child: Container(
                 margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 7,
+                ),
                 decoration: BoxDecoration(
                   color: sel ? _T.primary : Colors.white,
                   borderRadius: BorderRadius.circular(20),
@@ -305,27 +437,41 @@ class _MapScreenState extends State<MapScreen> {
 
   // ── CARTE ──
   Widget _buildMap() {
-    return FlutterMap(
-      mapController: _mapController,
-      options: MapOptions(
-        initialCenter: _userPosition ?? _defaultPosition,
-        initialZoom: _zoomForRadius(_radiusKm),
-        minZoom: 5,
-        maxZoom: 18,
-        onTap: (_, __) => setState(() => _selectedPro = null),
-      ),
-      children: [
-        TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.mitan.app',
-        ),
-        MarkerLayer(markers: _buildMarkers()),
-      ],
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _prosStream,
+      builder: (context, snapshot) {
+        final pros = snapshot.data ?? [];
+
+        return Stack(
+          children: [
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: _userPosition ?? _defaultPosition,
+                initialZoom: _zoomForRadius(_radiusKm),
+                minZoom: 5,
+                maxZoom: 18,
+                onTap: (_, point) => setState(() => _selectedProMap = null),
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.mitan.app',
+                ),
+                MarkerLayer(markers: _buildMarkersFromMaps(pros)),
+              ],
+            ),
+            _buildCounter(pros.length),
+            _buildFAB(),
+            if (_selectedProMap != null) _buildBottomSheet(),
+          ],
+        );
+      },
     );
   }
 
   // ── COMPTEUR ──
-  Widget _buildCounter() {
+  Widget _buildCounter(int prosCount) {
     return Positioned(
       bottom: 16,
       left: 16,
@@ -340,23 +486,35 @@ class _MapScreenState extends State<MapScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 8, height: 8,
-              decoration: BoxDecoration(color: _T.meColor, shape: BoxShape.circle),
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: _T.meColor,
+                shape: BoxShape.circle,
+              ),
             ),
             const SizedBox(width: 6),
-            const Text('Moi', style: TextStyle(fontSize: 11, color: _T.textSecondary)),
+            const Text(
+              'Moi',
+              style: TextStyle(fontSize: 11, color: _T.textSecondary),
+            ),
             Container(
-              width: 0.5, height: 14,
+              width: 0.5,
+              height: 14,
               color: _T.border,
               margin: const EdgeInsets.symmetric(horizontal: 8),
             ),
             Container(
-              width: 8, height: 8,
-              decoration: BoxDecoration(color: _T.primary, shape: BoxShape.circle),
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: _T.primary,
+                shape: BoxShape.circle,
+              ),
             ),
             const SizedBox(width: 6),
             Text(
-              '${_pros.length} prestataire${_pros.length > 1 ? 's' : ''} (${_radiusKm.toInt()} km)',
+              '$prosCount prestataire${prosCount > 1 ? 's' : ''} (${_radiusKm.toInt()} km)',
               style: const TextStyle(fontSize: 11, color: _T.textSecondary),
             ),
           ],
@@ -375,11 +533,12 @@ class _MapScreenState extends State<MapScreen> {
         child: Container(
           width: 44,
           height: 44,
-          decoration: BoxDecoration(
-            color: _T.primary,
-            shape: BoxShape.circle,
+          decoration: BoxDecoration(color: _T.primary, shape: BoxShape.circle),
+          child: const Icon(
+            Icons.my_location_rounded,
+            color: Colors.white,
+            size: 20,
           ),
-          child: const Icon(Icons.my_location_rounded, color: Colors.white, size: 20),
         ),
       ),
     );
@@ -387,12 +546,21 @@ class _MapScreenState extends State<MapScreen> {
 
   // ── BOTTOM SHEET PRESTATAIRE ──
   Widget _buildBottomSheet() {
-    final pro = _selectedPro!;
-    final colors = _T.avatarColor(pro.nom);
+    final pro = _selectedProMap!;
+    final nom = pro['nom'] as String? ?? '';
+    final categorie = pro['categorie'] as String? ?? '';
+    final ville = pro['ville'] as String? ?? '';
+    final bio = pro['bio'] as String? ?? '';
+    final photoUrl = pro['photoUrl'] as String? ?? '';
+    final colors = _T.avatarColor(nom);
+    final proLat = _markerLat(pro);
+    final proLng = _markerLng(pro);
     final distance = _userPosition != null
         ? _locationService.calculateDistance(
-            _userPosition!.latitude, _userPosition!.longitude,
-            pro.gpsLat, pro.gpsLng,
+            _userPosition!.latitude,
+            _userPosition!.longitude,
+            proLat,
+            proLng,
           )
         : null;
 
@@ -407,7 +575,9 @@ class _MapScreenState extends State<MapScreen> {
           border: Border(top: BorderSide(color: _T.border, width: 0.5)),
         ),
         padding: EdgeInsets.fromLTRB(
-          16, 12, 16,
+          16,
+          12,
+          16,
           MediaQuery.of(context).padding.bottom + 16,
         ),
         child: Column(
@@ -416,7 +586,8 @@ class _MapScreenState extends State<MapScreen> {
             // Handle
             Center(
               child: Container(
-                width: 36, height: 4,
+                width: 36,
+                height: 4,
                 decoration: BoxDecoration(
                   color: _T.border,
                   borderRadius: BorderRadius.circular(2),
@@ -434,17 +605,17 @@ class _MapScreenState extends State<MapScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: colors[0],
-                    image: pro.photoUrl.isNotEmpty
+                    image: photoUrl.isNotEmpty
                         ? DecorationImage(
-                            image: NetworkImage(pro.photoUrl),
+                            image: NetworkImage(photoUrl),
                             fit: BoxFit.cover,
                           )
                         : null,
                   ),
-                  child: pro.photoUrl.isEmpty
+                  child: photoUrl.isEmpty
                       ? Center(
                           child: Text(
-                            pro.nom.isNotEmpty ? pro.nom[0].toUpperCase() : '?',
+                            nom.isNotEmpty ? nom[0].toUpperCase() : '?',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -460,7 +631,7 @@ class _MapScreenState extends State<MapScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        pro.nom,
+                        nom,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
@@ -470,15 +641,18 @@ class _MapScreenState extends State<MapScreen> {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          if (pro.categorie.isNotEmpty) ...[
+                          if (categorie.isNotEmpty) ...[
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: _T.primaryLight,
                                 borderRadius: BorderRadius.circular(5),
                               ),
                               child: Text(
-                                pro.categorie,
+                                categorie,
                                 style: const TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
@@ -489,41 +663,56 @@ class _MapScreenState extends State<MapScreen> {
                             const SizedBox(width: 6),
                           ],
                           if (distance != null) ...[
-                            const Icon(Icons.location_on_rounded, size: 12, color: _T.textTertiary),
+                            const Icon(
+                              Icons.location_on_rounded,
+                              size: 12,
+                              color: _T.textTertiary,
+                            ),
                             const SizedBox(width: 2),
                             Text(
                               '${distance.toStringAsFixed(1)} km',
-                              style: const TextStyle(fontSize: 11, color: _T.textTertiary),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: _T.textTertiary,
+                              ),
                             ),
                           ],
                         ],
                       ),
-                      if (pro.ville.isNotEmpty) ...[
+                      if (ville.isNotEmpty) ...[
                         const SizedBox(height: 2),
                         Text(
-                          pro.ville.split(',').first,
-                          style: const TextStyle(fontSize: 11, color: _T.textTertiary),
+                          ville.split(',').first,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: _T.textTertiary,
+                          ),
                         ),
                       ],
                     ],
                   ),
                 ),
                 Container(
-                  width: 32, height: 32,
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
                     color: _T.bg,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: _T.border),
                   ),
-                  child: const Icon(Icons.chevron_right_rounded, size: 18, color: _T.textTertiary),
+                  child: const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: _T.textTertiary,
+                  ),
                 ),
               ],
             ),
 
-            if (pro.bio.isNotEmpty) ...[
+            if (bio.isNotEmpty) ...[
               const SizedBox(height: 10),
               Text(
-                pro.bio,
+                bio,
                 style: const TextStyle(fontSize: 12, color: _T.textSecondary),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -554,7 +743,8 @@ class _MapScreenState extends State<MapScreen> {
             children: [
               Center(
                 child: Container(
-                  width: 36, height: 4,
+                  width: 36,
+                  height: 4,
                   decoration: BoxDecoration(
                     color: _T.border,
                     borderRadius: BorderRadius.circular(2),
@@ -575,22 +765,21 @@ class _MapScreenState extends State<MapScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: _categories.map((cat) {
-                  final sel = tempCat == cat ||
-                      (tempCat == null && cat == 'Tous');
+                  final sel =
+                      tempCat == cat || (tempCat == null && cat == 'Tous');
                   return GestureDetector(
                     onTap: () => setSheet(() {
                       tempCat = cat == 'Tous' ? null : cat;
                     }),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8,
+                        horizontal: 14,
+                        vertical: 8,
                       ),
                       decoration: BoxDecoration(
                         color: sel ? _T.primary : Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: sel ? _T.primary : _T.border,
-                        ),
+                        border: Border.all(color: sel ? _T.primary : _T.border),
                       ),
                       child: Text(
                         cat,
@@ -619,15 +808,15 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                   onPressed: () {
                     Navigator.pop(ctx);
-                    setState(() => _selectedCategorie = tempCat);
-                    _loadPros();
+                    setState(() {
+                      _selectedCategorie = tempCat;
+                      _selectedProMap = null;
+                      _configureProsStream();
+                    });
                   },
                   child: const Text(
                     'Appliquer',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -647,7 +836,8 @@ class _MapScreenState extends State<MapScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 64, height: 64,
+              width: 64,
+              height: 64,
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
@@ -669,7 +859,10 @@ class _MapScreenState extends State<MapScreen> {
             GestureDetector(
               onTap: _initMap,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 11,
+                ),
                 decoration: BoxDecoration(
                   color: _T.primary,
                   borderRadius: BorderRadius.circular(12),
