@@ -8,8 +8,10 @@ import '../../services/user_service.dart';
 import '../../services/history_service.dart';
 import '../../utils/distance_helper.dart';
 import '../../utils/geo_utils.dart';
+import '../../widgets/attributes_grid.dart';
 import '../chat/chat_screen.dart';
 import '../profile/public_profile_screen.dart';
+import 'fullscreen_gallery_screen.dart';
 
 // ─────────────────────────────────────────────────
 // THÈME
@@ -211,10 +213,21 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   PageView.builder(
                     itemCount: photos.length,
                     onPageChanged: (i) => setState(() => _photoIndex = i),
-                    itemBuilder: (_, i) => Image.network(
-                      photos[i],
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _photoPlaceholder(catBg, catCol),
+                    itemBuilder: (_, i) => GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => FullscreenGalleryScreen(
+                            photos: photos,
+                            initialIndex: i,
+                          ),
+                        ),
+                      ),
+                      child: Image.network(
+                        photos[i],
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _photoPlaceholder(catBg, catCol),
+                      ),
                     ),
                   ),
                   if (photos.length > 1)
@@ -255,6 +268,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   Widget _buildContent() {
     final catColor = _T.catColor(widget.service.categorie);
     final catBg    = _T.catBgColor(widget.service.categorie);
+    final hasAttributs = widget.service.attributs.values.any(
+      (value) => value.trim().isNotEmpty,
+    );
 
     return Container(
       color: Colors.white,
@@ -356,6 +372,20 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
               height: 1.65,
             ),
           ),
+
+          if (hasAttributs) ...[
+            const _Divider(),
+            const Text(
+              'Caractéristiques',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: _T.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 10),
+            AttributesGrid(attributs: widget.service.attributs),
+          ],
 
           const _Divider(),
 

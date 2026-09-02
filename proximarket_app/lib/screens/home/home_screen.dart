@@ -347,6 +347,7 @@ class _HomeTabState extends State<_HomeTab> {
           SliverToBoxAdapter(child: _buildGreeting()),
           SliverToBoxAdapter(child: _buildSearchBar()),
           SliverToBoxAdapter(child: _buildGpsCard()),
+          SliverToBoxAdapter(child: _buildNouveautesBanner()),
           SliverToBoxAdapter(child: _buildCategories()),
           SliverToBoxAdapter(child: _buildRecentlyViewed()),
           SliverToBoxAdapter(child: _buildNearbyHeader()),
@@ -379,6 +380,59 @@ class _HomeTabState extends State<_HomeTab> {
           fontWeight: FontWeight.w700,
           color: _T.textPrimary,
           letterSpacing: -0.3,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNouveautesBanner() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+      child: GestureDetector(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const ServicesListScreen(
+              initialSort: SortOption.recent,
+            ),
+          ),
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _T.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _T.primaryLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.fiber_new_rounded,
+                  color: _T.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Nouvelles annonces publiées',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _T.textPrimary,
+                  ),
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: _T.textTertiary),
+            ],
+          ),
         ),
       ),
     );

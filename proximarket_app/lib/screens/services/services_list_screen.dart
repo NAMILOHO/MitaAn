@@ -71,10 +71,12 @@ enum SortOption {
 // ─────────────────────────────────────────────────
 class ServicesListScreen extends StatefulWidget {
   final String? initialCategory;
+  final SortOption? initialSort;
 
   const ServicesListScreen({
     super.key,
     this.initialCategory,
+    this.initialSort,
   });
 
   @override
@@ -91,7 +93,7 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
   String _searchQuery = '';
   Timer? _debounceTimer;
   final Set<String> _selectedCategories = {};
-  SortOption _sortOption = SortOption.distance;
+  late SortOption _sortOption;
   double _radiusKm = 50.0;
   bool _showFiltersPanel = false;
 
@@ -109,6 +111,7 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
   @override
   void initState() {
     super.initState();
+    _sortOption = widget.initialSort ?? SortOption.distance;
     _loadData();
     _scrollController.addListener(_onScroll);
   }

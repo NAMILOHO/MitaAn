@@ -64,6 +64,8 @@ class ServiceFirestore {
     required double gpsLat,
     required double gpsLng,
     required String ville,
+    String typeAnnonce = 'autre',
+    Map<String, String> attributs = const {},
   }) async {
     final docRef = _firestore.collection('services').doc();
     final service = ServiceModel(
@@ -81,6 +83,8 @@ class ServiceFirestore {
       ville: ville,
       isActive: true,
       createdAt: DateTime.now(),
+      typeAnnonce: typeAnnonce,
+      attributs: attributs,
     );
 
     await docRef.set({

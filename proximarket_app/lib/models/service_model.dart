@@ -16,6 +16,8 @@ class ServiceModel {
   final int quantity;
   final bool isArchived;
   final DateTime? createdAt;
+  final String typeAnnonce;
+  final Map<String, String> attributs;
 
   ServiceModel({
     required this.id,
@@ -33,10 +35,14 @@ class ServiceModel {
     this.quantity = 0,
     this.isArchived = false,
     this.createdAt,
+    this.typeAnnonce = 'autre',
+    this.attributs = const {},
   });
 
   // Firestore → ServiceModel
   factory ServiceModel.fromMap(Map<String, dynamic> map, String id) {
+    final rawAttributs = map['attributs'];
+
     return ServiceModel(
       id: id,
       userId: map['userId'] ?? '',
@@ -55,6 +61,12 @@ class ServiceModel {
       createdAt: map['createdAt'] is Timestamp
           ? (map['createdAt'] as Timestamp).toDate()
           : map['createdAt']?.toDate(),
+      typeAnnonce: map['typeAnnonce'] ?? 'autre',
+      attributs: rawAttributs is Map
+          ? rawAttributs.map(
+              (key, value) => MapEntry(key.toString(), value?.toString() ?? ''),
+            )
+          : const {},
     );
   }
 
@@ -74,6 +86,8 @@ class ServiceModel {
       'isActive': isActive,
       'quantity': quantity,
       'isArchived': isArchived,
+      'typeAnnonce': typeAnnonce,
+      'attributs': attributs,
       if (createdAt != null) 'createdAt': createdAt,
     };
   }
@@ -92,6 +106,8 @@ class ServiceModel {
     bool? isActive,
     int? quantity,
     bool? isArchived,
+    String? typeAnnonce,
+    Map<String, String>? attributs,
   }) {
     return ServiceModel(
       id: id,
@@ -109,6 +125,8 @@ class ServiceModel {
       quantity: quantity ?? this.quantity,
       isArchived: isArchived ?? this.isArchived,
       createdAt: createdAt,
+      typeAnnonce: typeAnnonce ?? this.typeAnnonce,
+      attributs: attributs ?? this.attributs,
     );
   }
 }

@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/service_model.dart';
+import '../../core/enums/type_annonce.dart';
 import '../../providers/service_provider.dart';
 import '../../services/location_service.dart';
+import '../../widgets/attributes_input_field.dart';
 
 class CreateServiceScreen extends StatefulWidget {
   const CreateServiceScreen({super.key});
@@ -31,6 +32,8 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
   String? _selectedCategory;
   String _selectedUnite = 'forfait';
   List<File> _selectedImages = [];
+  TypeAnnonce _typeAnnonce = TypeAnnonce.autre;
+  Map<String, String> _attributs = {};
 
   // GPS
   double _gpsLat = 0.0;
@@ -141,8 +144,8 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
     if (_currentStep == 0) {
       if (!(_step1Key.currentState?.validate() ?? false)) return;
 
-      if (_selectedCategory == null) {
-        _showError('Veuillez sélectionner une catégorie.');
+      if ((_selectedCategory ?? '').trim().isEmpty) {
+        _showError('Veuillez renseigner une catégorie.');
         return;
       }
 
@@ -158,15 +161,20 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
     }
 
     if (_currentStep == 1) {
-      if (_selectedImages.isEmpty) {
-        _showError('Ajoutez au moins une photo');
-        return;
-      }
       setState(() => _currentStep = 2);
       return;
     }
 
     if (_currentStep == 2) {
+      if (_selectedImages.isEmpty) {
+        _showError('Ajoutez au moins une photo');
+        return;
+      }
+      setState(() => _currentStep = 3);
+      return;
+    }
+
+    if (_currentStep == 3) {
       _publish();
     }
   }
@@ -203,8 +211,8 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
       _showError('Ajoutez au moins une photo.');
       return;
     }
-    if (_selectedCategory == null) {
-      _showError('Veuillez sélectionner une catégorie.');
+    if ((_selectedCategory ?? '').trim().isEmpty) {
+      _showError('Veuillez renseigner une catégorie.');
       return;
     }
 
@@ -216,7 +224,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
       userId: uid,
       titre: titre,
       description: description,
-      categorie: _selectedCategory!,
+      categorie: _selectedCategory!.trim(),
       prix: prix < 0 ? 0.0 : prix,
       unite: _selectedUnite,
       quantity: int.tryParse(_quantityController.text.trim()) ?? 0,
@@ -224,6 +232,8 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
       gpsLat: _gpsLat,
       gpsLng: _gpsLng,
       ville: _ville,
+      typeAnnonce: _typeAnnonce.firestoreKey,
+      attributs: _attributs,
     );
 
     setState(() => _isLoading = false);
@@ -268,6 +278,8 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
       _selectedCategory = null;
       _selectedUnite = 'forfait';
       _selectedImages = [];
+      _typeAnnonce = TypeAnnonce.autre;
+      _attributs = {};
     });
     _loadLocation();
   }
@@ -332,7 +344,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
                             ),
                           ),
                           child: Text(
-                            _currentStep == 2 ? 'Publier l\'annonce' : 'Suivant',
+                            _currentStep == 3 ? 'Publier l\'annonce' : 'Suivant',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -356,6 +368,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
               },
               steps: [
                 _buildStep1(),
+                _buildStepAttributs(),
                 _buildStep2(),
                 _buildStep3(),
               ],
@@ -388,14 +401,39 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
             ),
             const SizedBox(height: 16),
 
-            DropdownButtonFormField<String>(
-              value: _selectedCategory,
-              decoration: _inputDecoration('Catégorie', Icons.category_outlined),
-              hint: const Text('Choisir une catégorie'),
-              items: _categories
-                  .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
-                  .toList(),
-              onChanged: (v) => setState(() => _selectedCategory = v),
+            Autocomplete<String>(
+              optionsBuilder: (value) {
+                final input = value.text.trim().toLowerCase();
+                if (input.isEmpty) return _categories;
+                return _categories.where(
+                  (c) => c.toLowerCase().contains(input),
+                );
+              },
+              onSelected: (value) => setState(() => _selectedCategory = value),
+              fieldViewBuilder: (context, controller, focusNode, onSubmit) {
+                if ((_selectedCategory ?? '').isNotEmpty &&
+                    controller.text != _selectedCategory) {
+                  controller.text = _selectedCategory!;
+                  controller.selection = TextSelection.collapsed(
+                    offset: controller.text.length,
+                  );
+                }
+                return TextFormField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  decoration: _inputDecoration(
+                    'Catégorie (libre)',
+                    Icons.category_outlined,
+                  ),
+                  onChanged: (value) => _selectedCategory = value,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Catégorie requise';
+                    }
+                    return null;
+                  },
+                );
+              },
             ),
             const SizedBox(height: 16),
 
@@ -457,12 +495,46 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
     );
   }
 
+  Step _buildStepAttributs() {
+    return Step(
+      title: const Text('Détails'),
+      subtitle: const Text('Type et caractéristiques'),
+      isActive: _currentStep >= 1,
+      state: _currentStep > 1 ? StepState.complete : StepState.indexed,
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: TypeAnnonce.values.map((type) {
+              final selected = _typeAnnonce == type;
+              return ChoiceChip(
+                label: Text(type.label),
+                selected: selected,
+                selectedColor: primaryColor.withValues(alpha: 0.2),
+                checkmarkColor: primaryColor,
+                onSelected: (_) => setState(() => _typeAnnonce = type),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+          AttributesInputField(
+            typeAnnonce: _typeAnnonce,
+            attributs: _attributs,
+            onChanged: (value) => setState(() => _attributs = value),
+          ),
+        ],
+      ),
+    );
+  }
+
   Step _buildStep2() {
     return Step(
       title: const Text('Photos'),
       subtitle: Text('${_selectedImages.length}/4 photos'),
-      isActive: _currentStep >= 1,
-      state: _currentStep > 1 ? StepState.complete : StepState.indexed,
+      isActive: _currentStep >= 2,
+      state: _currentStep > 2 ? StepState.complete : StepState.indexed,
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -539,7 +611,7 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
     return Step(
       title: const Text('Localisation'),
       subtitle: const Text('Confirmer votre position'),
-      isActive: _currentStep >= 2,
+      isActive: _currentStep >= 3,
       state: StepState.indexed,
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -602,10 +674,19 @@ class _CreateServiceScreenState extends State<CreateServiceScreen> {
           const SizedBox(height: 12),
           _buildRecapRow('Titre', _titreController.text.trim()),
           _buildRecapRow('Catégorie', _selectedCategory ?? '-'),
+          _buildRecapRow('Type', _typeAnnonce.label),
           _buildRecapRow(
             'Prix',
             _prixController.text.isNotEmpty ? '${_prixController.text} FCFA / $_selectedUnite' : '-',
           ),
+          if (_attributs.values.any((value) => value.trim().isNotEmpty))
+            _buildRecapRow(
+              'Détails',
+              _attributs.entries
+                  .where((entry) => entry.value.trim().isNotEmpty)
+                  .map((entry) => '${entry.key}: ${entry.value}')
+                  .join(' • '),
+            ),
           _buildRecapRow('Photos', '${_selectedImages.length} photo(s)'),
         ],
       ),

@@ -45,6 +45,8 @@ class ServiceProvider extends ChangeNotifier {
     required double gpsLat,
     required double gpsLng,
     required String ville,
+    String typeAnnonce = 'autre',
+    Map<String, String> attributs = const {},
   }) async {
     _setLoading(true);
     try {
@@ -68,6 +70,8 @@ class ServiceProvider extends ChangeNotifier {
         gpsLat: gpsLat,
         gpsLng: gpsLng,
         ville: ville,
+        typeAnnonce: typeAnnonce,
+        attributs: attributs,
       );
 
       _services.insert(0, service);
@@ -288,6 +292,10 @@ class ServiceProvider extends ChangeNotifier {
           unite: data['unite'],
           photos: data['photos'] != null ? List<String>.from(data['photos']) : null,
           quantity: data['quantity'],
+          typeAnnonce: data['typeAnnonce'],
+          attributs: data['attributs'] != null
+              ? Map<String, String>.from(data['attributs'])
+              : null,
         );
       }
     }
