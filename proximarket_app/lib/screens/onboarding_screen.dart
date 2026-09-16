@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // ← Import ajouté
+import 'package:shared_preferences/shared_preferences.dart';
 
-import '../utils/app_colors.dart';
 import 'auth/login_screen.dart';
 import 'auth/register_screen.dart';
 
@@ -13,27 +12,38 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
+  static const Color _primary = Color(0xFF1D9E75);
+  static const Color _primaryDark = Color(0xFF085041);
+  static const Color _bg = Color(0xFFF8FAF9);
+  static const Color _textDark = Color(0xFF111827);
+  static const Color _textGrey = Color(0xFF6B7280);
+
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
   final List<_OnboardingData> _pages = [
     _OnboardingData(
-      icon: Icons.location_on,
-      title: 'Services près de vous',
-      description: 'MitaAn connecte les professionnels locaux\navec les clients de leur quartier.',
-      color: const Color(0xFF1D9E75),
+      title: 'Découvrez ce qui\nvous entoure',
+      description:
+          'Trouvez facilement des produits, services, logements, véhicules et opportunités près de vous.',
+      icon: Icons.explore_rounded,
+      gradientColors: const [Color(0xFF2D3436), Color(0xFF485563)],
     ),
     _OnboardingData(
-      icon: Icons.store,
-      title: 'Vendez facilement',
-      description: 'Publiez vos produits et services en quelques\nsecondes et touchez des clients locaux.',
-      color: const Color(0xFF1976D2),
+      title: 'Publiez ce que\nvous voulez',
+      description:
+          'Vendez, proposez, louez ou partagez une annonce en quelques secondes seulement.',
+      icon: Icons.add_photo_alternate_rounded,
+      gradientColors: const [Color(0xFFE8F5F0), Color(0xFFD4EDE4)],
+      isLight: true,
+      accentTitle: 'vous voulez',
     ),
     _OnboardingData(
-      icon: Icons.chat_bubble_outline,
-      title: 'Contactez directement',
-      description: 'Discutez via la messagerie intégrée\nou contactez par WhatsApp en un clic.',
-      color: const Color(0xFF388E3C),
+      title: 'Connectez-vous\nfacilement',
+      description:
+          'Contactez directement les personnes qui proposent ce que vous recherchez, sans intermédiaires.',
+      icon: Icons.handshake_rounded,
+      gradientColors: const [Color(0xFFDCC6A8), Color(0xFFC9A876)],
     ),
   ];
 
@@ -43,29 +53,78 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
+  bool get _isLastPage => _currentPage == _pages.length - 1;
+
+  Future<void> _finishOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboarding_done', true);
+  }
+
+  void _goToRegister() async {
+    await _finishOnboarding();
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const RegisterScreen()),
+    );
+  }
+
+  void _goToLogin() async {
+    await _finishOnboarding();
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
+  }
+
+  void _onContinue() {
+    if (_isLastPage) {
+      _goToRegister();
+    } else {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: _bg,
       body: SafeArea(
         child: Column(
           children: [
-            // Bouton passer
+            // ── BOUTON PASSER ──
             Align(
               alignment: Alignment.topRight,
-              child: TextButton(
-                onPressed: () => _goToLogin(),
-                child: const Text(
-                  'Passer',
-                  style: TextStyle(
-                    color: AppColors.grey,
-                    fontSize: 15,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 20, top: 4),
+                child: TextButton(
+                  onPressed: _goToLogin,
+                  style: TextButton.styleFrom(
+                    foregroundColor: _textGrey,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Text(
+                        'Passer',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SizedBox(width: 2),
+                      Icon(Icons.chevron_right_rounded, size: 18),
+                    ],
                   ),
                 ),
               ),
             ),
 
-            // Pages
+            // ── PAGES ──
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -75,88 +134,72 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-            // Indicateurs
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                _pages.length,
-                (i) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: i == _currentPage ? 24 : 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: i == _currentPage
-                        ? AppColors.primary
-                        : AppColors.greyLight,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Boutons
+            // ── INDICATEURS + CTA ──
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
               child: Column(
                 children: [
-                  // Bouton principal
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (_currentPage < _pages.length - 1) {
-                          _pageController.nextPage(
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                          );
-                        } else {
-                          _goToRegister();
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: Text(
-                        _currentPage < _pages.length - 1 ? 'Suivant' : 'Commencer',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      _pages.length,
+                      (i) => AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        width: i == _currentPage ? 22 : 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: i == _currentPage
+                              ? _primary
+                              : _primary.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-
-                  // Lien connexion
-                  GestureDetector(
-                    onTap: _goToLogin,
-                    child: RichText(
-                      text: const TextSpan(
-                        text: 'Déjà un compte ? ',
-                        style: TextStyle(color: AppColors.grey),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: ElevatedButton(
+                      onPressed: _onContinue,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          TextSpan(
-                            text: 'Se connecter',
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
+                          Text(
+                            _isLastPage ? 'Commencer' : 'Continuer',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.arrow_forward_rounded, size: 18),
                         ],
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'MITAAN — MARKETPLACE LOCALE CI',
+                    style: TextStyle(
+                      color: _textGrey.withValues(alpha: 0.55),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.1,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 32),
           ],
         ),
       ),
@@ -165,80 +208,120 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Widget _buildPage(_OnboardingData data) {
     return Padding(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 150,
-            height: 150,
-            decoration: BoxDecoration(
-              color: data.color.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              data.icon,
-              size: 76,
-              color: data.color,
+          // ── ILLUSTRATION ──
+          // 👉 Point d'extension : remplace ce Container par
+          // Image.asset('assets/images/onboarding_X.jpg') si tu ajoutes
+          // les vraies photos du design Visily dans les assets.
+          Expanded(
+            flex: 5,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: data.gradientColors,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Center(
+                  child: Container(
+                    width: 96,
+                    height: 96,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(
+                        alpha: data.isLight ? 0.9 : 0.15,
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      data.icon,
+                      size: 46,
+                      color: data.isLight ? _primary : Colors.white,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 48),
-          Text(
-            data.title,
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
+
+          const SizedBox(height: 28),
+
+          // ── TITRE ──
+          _buildTitle(data),
+
+          const SizedBox(height: 12),
+
+          // ── DESCRIPTION ──
           Text(
             data.description,
             style: const TextStyle(
-              fontSize: 15,
-              color: AppColors.greyDark,
-              height: 1.7,
+              fontSize: 14,
+              color: _textGrey,
+              height: 1.55,
             ),
-            textAlign: TextAlign.center,
           ),
+
+          const Spacer(),
         ],
       ),
     );
   }
 
-  // ====================== MÉTHODES MISES À JOUR ======================
-  void _goToRegister() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('onboarding_done', true);
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const RegisterScreen()),
-    );
-  }
+  Widget _buildTitle(_OnboardingData data) {
+    if (data.accentTitle == null) {
+      return Text(
+        data.title,
+        style: const TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w800,
+          color: _textDark,
+          height: 1.25,
+        ),
+      );
+    }
 
-  void _goToLogin() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('onboarding_done', true);
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    // Titre avec un mot accentué en vert (écran 2 du design)
+    final parts = data.title.split('\n');
+    return RichText(
+      text: TextSpan(
+        style: const TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w800,
+          color: _textDark,
+          height: 1.25,
+        ),
+        children: [
+          TextSpan(text: '${parts.first}\n'),
+          TextSpan(
+            text: parts.length > 1 ? parts[1] : '',
+            style: const TextStyle(color: _primaryDark),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _OnboardingData {
-  final IconData icon;
   final String title;
   final String description;
-  final Color color;
+  final IconData icon;
+  final List<Color> gradientColors;
+  final bool isLight;
+  final String? accentTitle;
 
   _OnboardingData({
-    required this.icon,
     required this.title,
     required this.description,
-    required this.color,
+    required this.icon,
+    required this.gradientColors,
+    this.isLight = false,
+    this.accentTitle,
   });
 }

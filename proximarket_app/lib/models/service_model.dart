@@ -1,5 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../core/enums/announcement_category.dart';
+import '../core/enums/price_type.dart';
+
 class ServiceModel {
   final String id;
   final String userId;
@@ -18,6 +21,8 @@ class ServiceModel {
   final DateTime? createdAt;
   final String typeAnnonce;
   final Map<String, String> attributs;
+  final AnnouncementCategory category;
+  final PriceType priceType;
 
   ServiceModel({
     required this.id,
@@ -37,6 +42,8 @@ class ServiceModel {
     this.createdAt,
     this.typeAnnonce = 'autre',
     this.attributs = const {},
+    this.category = AnnouncementCategory.autre,
+    this.priceType = PriceType.fixed,
   });
 
   // Firestore → ServiceModel
@@ -67,6 +74,8 @@ class ServiceModel {
               (key, value) => MapEntry(key.toString(), value?.toString() ?? ''),
             )
           : const {},
+      category: AnnouncementCategoryExt.fromString(map['category']),
+      priceType: PriceTypeExt.fromString(map['priceType']),
     );
   }
 
@@ -88,6 +97,8 @@ class ServiceModel {
       'isArchived': isArchived,
       'typeAnnonce': typeAnnonce,
       'attributs': attributs,
+      'category': category.name,
+      'priceType': priceType.name,
       if (createdAt != null) 'createdAt': createdAt,
     };
   }
@@ -108,6 +119,8 @@ class ServiceModel {
     bool? isArchived,
     String? typeAnnonce,
     Map<String, String>? attributs,
+    AnnouncementCategory? category,
+    PriceType? priceType,
   }) {
     return ServiceModel(
       id: id,
@@ -127,6 +140,8 @@ class ServiceModel {
       createdAt: createdAt,
       typeAnnonce: typeAnnonce ?? this.typeAnnonce,
       attributs: attributs ?? this.attributs,
+      category: category ?? this.category,
+      priceType: priceType ?? this.priceType,
     );
   }
 }
